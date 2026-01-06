@@ -12,6 +12,7 @@ import ProRouter from './pro/ProRouter'
 import ProjectsRouter from './ProjectsRouter'
 import RegistriesRouter from './registeries/RegistriesRouter'
 import SystemRouter from './system/SystemRouter'
+import GitHubRouter from './GitHubRouter'
 import onFinished = require('on-finished')
 import { IHashMapGeneric } from '../../models/ICacheGeneric'
 
@@ -127,6 +128,8 @@ router.post('/changepassword/', function (req, res, next) {
 router.use('/apps/', AppsRouter)
 
 router.use('/projects/', ProjectsRouter)
+
+router.use('/github/', GitHubRouter)
 
 router.use('/oneclick/', OneClickAppRouter)
 

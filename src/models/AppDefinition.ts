@@ -1,4 +1,5 @@
 import { IHashMapGeneric } from './ICacheGeneric'
+import { ServiceType } from './ServiceType'
 
 export type IAllAppDefinitions = IHashMapGeneric<IAppDef>
 
@@ -106,6 +107,10 @@ export interface IAppDef extends IAppDefinitionBase {
     httpAuth?: IHttpAuth
     appName?: string
     isAppBuilding?: boolean
+    serviceType?: ServiceType
+    displayName?: string
+    githubPath?: string
+    connectedServices?: string[]
 }
 
 export interface IAppDefSaved extends IAppDefinitionBase {

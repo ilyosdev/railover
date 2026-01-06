@@ -936,6 +936,7 @@ class AppsDataStore {
                 projectId: projectId,
                 description: '',
                 instanceCount: 1,
+                containerHttpPort: 80,
                 captainDefinitionRelativeFilePath:
                     CaptainConstants.defaultCaptainDefinitionPath,
                 networks: [CaptainConstants.captainNetworkName],

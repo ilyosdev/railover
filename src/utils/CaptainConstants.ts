@@ -15,9 +15,9 @@ const CONSTANT_FILE_OVERRIDE_USER =
     CAPTAIN_DATA_DIRECTORY + '/config-override.json'
 
 const configs = {
-    publishedNameOnDockerHub: 'caprover/caprover',
+    publishedNameOnDockerHub: 'ilyosdev/railover',
 
-    version: '1.14.1',
+    version: '1.0.0',
 
     defaultMaxLogSize: '512m',
 

@@ -99,6 +99,11 @@ class ProjectsDataStore {
                     name: project.name,
                     parentProjectId: project.parentProjectId,
                     description: project.description,
+                    githubIntegration: project.githubIntegration,
+                    sharedEnvVars: project.sharedEnvVars,
+                    services: project.services,
+                    createdAt: project.createdAt,
+                    updatedAt: project.updatedAt,
                 }
 
                 self.data.set(

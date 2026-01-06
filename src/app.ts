@@ -51,22 +51,26 @@ app.use(
 )
 app.use(cookieParser())
 
+app.use('/', function (req, res, next) {
+    res.setHeader('Access-Control-Allow-Origin', '*')
+    res.setHeader('Access-Control-Allow-Credentials', 'true')
+    res.setHeader(
+        'Access-Control-Allow-Headers',
+        `${CaptainConstants.headerNamespace},${CaptainConstants.headerAuth},Content-Type`
+    )
+    res.setHeader(
+        'Access-Control-Allow-Methods',
+        'GET, POST, PUT, DELETE, OPTIONS'
+    )
+
+    if (req.method === 'OPTIONS') {
+        res.sendStatus(200)
+    } else {
+        next()
+    }
+})
+
 if (CaptainConstants.isDebug) {
-    app.use('/', function (req, res, next) {
-        res.setHeader('Access-Control-Allow-Origin', '*')
-        res.setHeader('Access-Control-Allow-Credentials', 'true')
-        res.setHeader(
-            'Access-Control-Allow-Headers',
-            `${CaptainConstants.headerNamespace},${CaptainConstants.headerAuth},Content-Type`
-        )
-
-        if (req.method === 'OPTIONS') {
-            res.sendStatus(200)
-        } else {
-            next()
-        }
-    })
-
     app.use('/force-exit', function (req, res, next) {
         res.send('Okay... I will exit in a second...')
 

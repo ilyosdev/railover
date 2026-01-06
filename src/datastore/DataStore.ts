@@ -35,6 +35,7 @@ const FEATURE_FLAGS = 'featureFlags'
 const AUTOMATED_CLEANUP = 'automatedCleanup'
 const THEMES = 'themes'
 const CURRENT_THEME = 'currentTheme'
+const GITHUB_TOKEN = 'githubToken'
 
 const DEFAULT_CAPTAIN_ROOT_DOMAIN = 'captain.localhost'
 
@@ -440,6 +441,30 @@ class DataStore {
                 JSON.stringify(parsedArray.filter((it) => it !== url))
             )
             resolve()
+        })
+    }
+
+    getGitHubToken(): Promise<string> {
+        const self = this
+        return Promise.resolve().then(function () {
+            const encrypted = self.data.get(GITHUB_TOKEN)
+            if (!encrypted) return ''
+            if (!self.encryptor) return encrypted
+            return self.encryptor.decrypt(encrypted)
+        })
+    }
+
+    setGitHubToken(token: string): Promise<void> {
+        const self = this
+        return Promise.resolve().then(function () {
+            if (!token) {
+                self.data.set(GITHUB_TOKEN, '')
+                return
+            }
+            const encrypted = self.encryptor
+                ? self.encryptor.encrypt(token)
+                : token
+            self.data.set(GITHUB_TOKEN, encrypted)
         })
     }
 }
