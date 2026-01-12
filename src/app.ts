@@ -99,7 +99,7 @@ app.use(function (req, res, next) {
 
 app.use(express.static(path.join(__dirname, '../dist-frontend')))
 
-app.use(express.static(path.join(__dirname, 'public')))
+app.use(express.static(path.join(__dirname, '../public')))
 
 app.use(CaptainConstants.healthCheckEndPoint, function (req, res, next) {
     res.send(CaptainManager.get().getHealthCheckUuid())
