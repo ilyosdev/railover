@@ -11,6 +11,7 @@ import Logger from '../../utils/Logger'
 import DatabaseTemplateManager from '../../user/DatabaseTemplateManager'
 import EnvVarManager from '../../user/EnvVarManager'
 import ServiceConnectionManager from '../../user/ServiceConnectionManager'
+import ReferenceVariableResolver from '../../user/ReferenceVariableResolver'
 import { ServiceType } from '../../models/ServiceType'
 
 const router = express.Router()
@@ -126,6 +127,22 @@ router.get('/', function (req, res, next) {
             res.send(baseApi)
         })
         .catch(ApiStatusCodes.createCatcher(res))
+})
+
+router.get('/database-templates', function (req, res, next) {
+    const dataStore =
+        InjectionExtractor.extractUserFromInjected(res).user.dataStore
+
+    const dbManager = new DatabaseTemplateManager(dataStore)
+
+    const templates = dbManager.getAvailableTemplates()
+
+    const baseApi = new BaseApi(
+        ApiStatusCodes.STATUS_OK,
+        'Database templates retrieved'
+    )
+    baseApi.data = { templates }
+    res.send(baseApi)
 })
 
 router.get('/:projectId/overview', function (req, res, next) {
@@ -474,7 +491,7 @@ router.get('/:projectId/deployments', function (req, res, next) {
     const projectId = `${req.params.projectId || ''}`.trim()
 
     let services: any[] = []
-    let deployments: any[] = []
+    const deployments: any[] = []
 
     return Promise.resolve()
         .then(function () {
@@ -509,6 +526,198 @@ router.get('/:projectId/deployments', function (req, res, next) {
                 'Project deployments retrieved'
             )
             baseApi.data = { deployments }
+            res.send(baseApi)
+        })
+        .catch(ApiStatusCodes.createCatcher(res))
+})
+
+router.get('/:projectId/services/:serviceName', function (req, res, next) {
+    const user = InjectionExtractor.extractUserFromInjected(res).user
+    const dataStore = user.dataStore
+    const serviceManager = user.serviceManager
+    const projectId = `${req.params.projectId || ''}`.trim()
+    const serviceName = `${req.params.serviceName || ''}`.trim()
+
+    let app: any
+    let project: any
+    let serviceRef: any
+    let isRunning = false
+    let deployedImageName: string | undefined
+
+    return Promise.resolve()
+        .then(function () {
+            return Promise.all([
+                dataStore.getAppsDataStore().getAppDefinition(serviceName),
+                dataStore.getProjectsDataStore().getProject(projectId),
+            ])
+        })
+        .then(function ([appDef, proj]) {
+            app = appDef
+            project = proj
+
+            if (app.projectId !== projectId) {
+                throw ApiStatusCodes.createError(
+                    ApiStatusCodes.ILLEGAL_OPERATION,
+                    'Service does not belong to this project'
+                )
+            }
+
+            const services = project.services || []
+            serviceRef = services.find(
+                (s: ServiceReference) => s.appName === serviceName
+            )
+
+            return serviceManager.isServiceRunning(serviceName)
+        })
+        .then(function (running) {
+            isRunning = running
+
+            const versions = app.versions || []
+            for (let i = 0; i < versions.length; i++) {
+                if (versions[i].version === app.deployedVersion) {
+                    deployedImageName = versions[i].deployedImageName
+                    break
+                }
+            }
+
+            const isDatabase =
+                app.serviceType === ServiceType.DATABASE ||
+                (app.tags || []).some(
+                    (t: { tagName: string }) => t.tagName === 'database'
+                )
+
+            let dbType: string | undefined
+            if (isDatabase) {
+                const dbTag = (app.tags || []).find((t: { tagName: string }) =>
+                    ['postgres', 'mysql', 'redis', 'mongodb'].includes(
+                        t.tagName
+                    )
+                )
+                if (dbTag) {
+                    dbType = dbTag.tagName
+                }
+            }
+
+            const baseApi = new BaseApi(
+                ApiStatusCodes.STATUS_OK,
+                'Service details retrieved'
+            )
+            baseApi.data = {
+                service: {
+                    appName: serviceName,
+                    displayName:
+                        serviceRef?.displayName ||
+                        app.displayName ||
+                        serviceName,
+                    serviceType: app.serviceType || serviceRef?.serviceType,
+                    projectId: app.projectId,
+                    description: app.description,
+                    isRunning: isRunning,
+                    deployedVersion: app.deployedVersion,
+                    deployedImageName: deployedImageName,
+                    containerHttpPort: app.containerHttpPort,
+                    instanceCount: app.instanceCount,
+                    hasPersistentData: app.hasPersistentData,
+                    notExposeAsWebApp: app.notExposeAsWebApp,
+                    envVars: app.envVars,
+                    volumes: app.volumes,
+                    connections: serviceRef?.connections || [],
+                    isDatabase: isDatabase,
+                    dbType: dbType,
+                    versions: app.versions,
+                },
+            }
+            res.send(baseApi)
+        })
+        .catch(ApiStatusCodes.createCatcher(res))
+})
+
+router.get('/:projectId/references', function (req, res, next) {
+    const dataStore =
+        InjectionExtractor.extractUserFromInjected(res).user.dataStore
+    const projectId = `${req.params.projectId || ''}`.trim()
+
+    const resolver = new ReferenceVariableResolver(dataStore)
+
+    return resolver
+        .getAvailableReferences(projectId)
+        .then(function (references) {
+            const baseApi = new BaseApi(
+                ApiStatusCodes.STATUS_OK,
+                'Available references retrieved'
+            )
+            baseApi.data = { references }
+            res.send(baseApi)
+        })
+        .catch(ApiStatusCodes.createCatcher(res))
+})
+
+router.post('/:projectId/env/resolve', function (req, res, next) {
+    const dataStore =
+        InjectionExtractor.extractUserFromInjected(res).user.dataStore
+    const projectId = `${req.params.projectId || ''}`.trim()
+    const envVars = req.body.envVars as { key: string; value: string }[]
+
+    const resolver = new ReferenceVariableResolver(dataStore)
+    let projectSharedVars: any[] = []
+    let projectServices: any[] = []
+
+    return Promise.resolve()
+        .then(function () {
+            return Promise.all([
+                dataStore.getProjectsDataStore().getProject(projectId),
+                dataStore.getAppsDataStore().getAppDefinitions(),
+            ])
+        })
+        .then(function ([project, allApps]) {
+            projectSharedVars = project.sharedEnvVars || []
+
+            const appsList = Object.keys(allApps).map((key) => ({
+                ...allApps[key],
+                appName: key,
+            }))
+            projectServices = appsList.filter(
+                (app) => app.projectId === projectId
+            )
+
+            const resolved = resolver.resolveVariables(
+                envVars,
+                projectServices,
+                projectSharedVars
+            )
+
+            const baseApi = new BaseApi(
+                ApiStatusCodes.STATUS_OK,
+                'Variables resolved'
+            )
+            baseApi.data = { resolved }
+            res.send(baseApi)
+        })
+        .catch(ApiStatusCodes.createCatcher(res))
+})
+
+router.get('/:projectId/collaborators', function (req, res, next) {
+    const dataStore =
+        InjectionExtractor.extractUserFromInjected(res).user.dataStore
+    const projectId = `${req.params.projectId || ''}`.trim()
+
+    Promise.resolve()
+        .then(function () {
+            return dataStore.getProjectsDataStore().getProject(projectId)
+        })
+        .then(function (project) {
+            if (!project) {
+                throw ApiStatusCodes.createError(
+                    ApiStatusCodes.NOT_FOUND,
+                    'Project not found'
+                )
+            }
+
+            const baseApi = new BaseApi(
+                ApiStatusCodes.STATUS_OK,
+                'Collaborators retrieved successfully'
+            )
+            baseApi.data = { collaborators: project.collaborators || [] }
             res.send(baseApi)
         })
         .catch(ApiStatusCodes.createCatcher(res))

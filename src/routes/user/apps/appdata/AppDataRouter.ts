@@ -78,7 +78,7 @@ router.post(
         const serviceManager =
             InjectionExtractor.extractUserFromInjected(res).user.serviceManager
 
-        const appName = req.params.appName
+        const appName = `${req.params.appName || ''}`
         const isDetachedBuild = !!req.query.detached
         const captainDefinitionContent = `${req.body.captainDefinitionContent || ''}`
         const gitHash = `${req.body.gitHash || ''}`

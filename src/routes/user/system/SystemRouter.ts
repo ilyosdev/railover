@@ -22,6 +22,20 @@ const router = express.Router()
 router.use('/selfhostregistry/', SystemRouteSelfHostRegistry)
 router.use('/themes/', ThemesRouter)
 
+router.get('/stats/', function (req, res, next) {
+    DockerApi.get()
+        .getAllContainerStats()
+        .then(function (stats) {
+            const baseApi = new BaseApi(
+                ApiStatusCodes.STATUS_OK,
+                'Container stats retrieved'
+            )
+            baseApi.data = { stats }
+            res.send(baseApi)
+        })
+        .catch(ApiStatusCodes.createCatcher(res))
+})
+
 router.post('/createbackup/', function (req, res, next) {
     const backupManager = CaptainManager.get().getBackupManager()
 

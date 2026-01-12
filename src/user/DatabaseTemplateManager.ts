@@ -230,19 +230,23 @@ class DatabaseTemplateManager {
                     imageName: template.imageName,
                 })
 
+                // Wait for deployment to complete (not detached) so versions array is populated
                 return uploadCaptainDefinitionContent(
                     {
                         appName: appName,
-                        isDetachedBuild: true,
+                        isDetachedBuild: false,
                         captainDefinitionContent: captainDefinitionContent,
                         gitHash: '',
                     },
                     self.serviceManager
                 ).then(function () {
                     Logger.d(
-                        `Database ${appName} deployment started with image ${template.imageName}`
+                        `Database ${appName} deployment completed with image ${template.imageName}`
                     )
-                    return app
+                    // Fetch fresh app definition with updated versions
+                    return dataStore
+                        .getAppsDataStore()
+                        .getAppDefinition(appName)
                 })
             })
     }

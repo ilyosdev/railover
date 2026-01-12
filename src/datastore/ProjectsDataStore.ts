@@ -104,6 +104,8 @@ class ProjectsDataStore {
                     services: project.services,
                     createdAt: project.createdAt,
                     updatedAt: project.updatedAt,
+                    ownerId: project.ownerId,
+                    collaborators: project.collaborators,
                 }
 
                 self.data.set(
@@ -145,6 +147,15 @@ class ProjectsDataStore {
                 }
                 return project
             })
+    }
+
+    updateProject(project: ProjectDefinition): Promise<void> {
+        const self = this
+        return Promise.resolve().then(function () {
+            return self.saveProject(project.id, project).then(function () {
+                return
+            })
+        })
     }
 
     organizeFromTheLeafsToRoot(input: ProjectDefinition[]) {

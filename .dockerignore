@@ -4,9 +4,7 @@
 
 /coverage
 /temp_upload
-/currentdirectory
 /node_modules
-/built
 /captain-sample-apps
 
 # JetBrains

@@ -109,6 +109,13 @@ class ServiceManager {
         return this.isReady
     }
 
+    isServiceRunning(appName: string) {
+        const serviceName = this.dataStore
+            .getAppsDataStore()
+            .getServiceName(appName)
+        return this.dockerApi.isServiceRunningByName(serviceName)
+    }
+
     scheduleDeployNewVersion(appName: string, source: IImageSource) {
         const self = this
 

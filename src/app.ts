@@ -246,9 +246,25 @@ app.use(function (err, req, res, next) {
 export default app
 
 export function initializeCaptainWithDelay() {
-    // Initializing with delay helps with debugging. Usually, docker didn't see the CAPTAIN service
-    // if this was done without a delay
     setTimeout(function () {
         CaptainManager.get().initialize()
     }, 1500)
+}
+
+export function initializeWebSocketServer() {
+    try {
+        const {
+            initializeSocketIO,
+        } = require('./routes/user/apps/logs/LogStreamRouter')
+        const { httpServer } = initializeSocketIO()
+
+        const port = CaptainConstants.configs.adminPortNumber3000 + 1
+        httpServer.listen(port, () => {
+            Logger.d(`WebSocket server listening on port ${port}`)
+        })
+    } catch (error) {
+        Logger.w(
+            `Socket.IO not available, WebSocket log streaming disabled: ${error}`
+        )
+    }
 }

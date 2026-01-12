@@ -1634,6 +1634,111 @@ class DockerApi {
             })
     }
 
+    getContainerStats(serviceName: string): Promise<{
+        serviceName: string
+        cpuPercent: number
+        memoryUsageMB: number
+        memoryLimitMB: number
+        memoryPercent: number
+        networkRxMB: number
+        networkTxMB: number
+    } | null> {
+        const self = this
+
+        return self
+            .getContainerIdByServiceName(serviceName)
+            .then(function (containerId) {
+                return self.dockerode.getContainer(containerId).stats({
+                    stream: false,
+                })
+            })
+            .then(function (stats: any) {
+                const cpuDelta =
+                    stats.cpu_stats.cpu_usage.total_usage -
+                    stats.precpu_stats.cpu_usage.total_usage
+                const systemDelta =
+                    stats.cpu_stats.system_cpu_usage -
+                    stats.precpu_stats.system_cpu_usage
+                const cpuCount = stats.cpu_stats.online_cpus || 1
+
+                const cpuPercent =
+                    systemDelta > 0
+                        ? (cpuDelta / systemDelta) * cpuCount * 100
+                        : 0
+
+                const memoryUsage = stats.memory_stats.usage || 0
+                const memoryLimit = stats.memory_stats.limit || 1
+                const memoryPercent = (memoryUsage / memoryLimit) * 100
+
+                let networkRx = 0
+                let networkTx = 0
+                if (stats.networks) {
+                    Object.values(stats.networks).forEach((net: any) => {
+                        networkRx += net.rx_bytes || 0
+                        networkTx += net.tx_bytes || 0
+                    })
+                }
+
+                return {
+                    serviceName,
+                    cpuPercent: Math.round(cpuPercent * 100) / 100,
+                    memoryUsageMB:
+                        Math.round((memoryUsage / 1024 / 1024) * 100) / 100,
+                    memoryLimitMB:
+                        Math.round((memoryLimit / 1024 / 1024) * 100) / 100,
+                    memoryPercent: Math.round(memoryPercent * 100) / 100,
+                    networkRxMB:
+                        Math.round((networkRx / 1024 / 1024) * 100) / 100,
+                    networkTxMB:
+                        Math.round((networkTx / 1024 / 1024) * 100) / 100,
+                }
+            })
+            .catch(function (error) {
+                Logger.d(`Failed to get stats for ${serviceName}: ${error}`)
+                return null
+            })
+    }
+
+    getAllContainerStats(): Promise<
+        Array<{
+            serviceName: string
+            cpuPercent: number
+            memoryUsageMB: number
+            memoryLimitMB: number
+            memoryPercent: number
+            networkRxMB: number
+            networkTxMB: number
+        }>
+    > {
+        const self = this
+
+        return self.dockerode
+            .listServices()
+            .then(function (services) {
+                const appServices = services.filter((s) => {
+                    const name = s.Spec?.Name
+                    return name && name.startsWith('srv-')
+                })
+
+                const statsPromises = appServices.map((service) =>
+                    self.getContainerStats(service.Spec!.Name!)
+                )
+
+                return Promise.all(statsPromises)
+            })
+            .then(function (results) {
+                return results.filter((r) => r !== null) as Array<{
+                    serviceName: string
+                    cpuPercent: number
+                    memoryUsageMB: number
+                    memoryLimitMB: number
+                    memoryPercent: number
+                    networkRxMB: number
+                    networkTxMB: number
+                }>
+            })
+    }
+
     isNodeManager(nodeId: string) {
         const self = this
         return self.dockerode

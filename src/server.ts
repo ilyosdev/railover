@@ -4,7 +4,10 @@ console.log('Captain Starting ...')
 
 // Check if Captain is running as an installer or not.
 import * as http from 'http'
-import app, { initializeCaptainWithDelay } from './app'
+import app, {
+    initializeCaptainWithDelay,
+    initializeWebSocketServer,
+} from './app'
 import { AnyError } from './models/OtherTypes'
 import CaptainConstants from './utils/CaptainConstants'
 import * as CaptainInstaller from './utils/CaptainInstaller'
@@ -25,6 +28,8 @@ function startServer() {
     }
 
     initializeCaptainWithDelay()
+
+    initializeWebSocketServer()
 
     /**
      * Get port from environment and store in Express.

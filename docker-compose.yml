@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+    railover:
+        image: ilyosdev/railover:latest
+        container_name: captain-captain
+        restart: unless-stopped
+
+        ports:
+            - '80:80'
+            - '443:443'
+            - '3000:3000'
+            - '996:996'
+            - '7946:7946'
+            - '4789:4789'
+            - '2377:2377'
+
+        volumes:
+            - railover-data:/captain/data
+            - /var/run/docker.sock:/var/run/docker.sock
+
+        environment:
+            - CAPTAIN_ADMIN_PASSWORD=${RAILOVER_PASSWORD:-changeme123}
+            - CAPTAIN_DEFAULT_EMAIL=${RAILOVER_DEFAULT_EMAIL:-admin@railover.local}
+
+        labels:
+            - 'com.centurylinklabs.watchtower.enable=true'
+
+        deploy:
+            resources:
+                limits:
+                    cpus: '2.0'
+                    memory: 2G
+                reservations:
+                    cpus: '0.5'
+                    memory: 512M
+
+        healthcheck:
+            test:
+                [
+                    'CMD',
+                    'wget',
+                    '--no-verbose',
+                    '--tries=1',
+                    '--spider',
+                    'http://localhost:3000/api/v2/login',
+                ]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+            start_period: 40s
+
+volumes:
+    railover-data:
+        driver: local
+        driver_opts:
+            type: none
+            o: bind
+            device: /opt/railover/data

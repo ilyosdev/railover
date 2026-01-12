@@ -84,6 +84,7 @@ export function injectUser() {
                         ),
                         initialized: serviceManager.isInited(),
                         userManager: userManager,
+                        currentUsername: userDecoded.username || 'admin',
                     }
                     res.locals.user = user
                 }

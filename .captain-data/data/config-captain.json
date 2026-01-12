@@ -1,0 +1,6 @@
+{
+	"namespace": "captain",
+	"featureFlags": {
+		"isProEnabled": true
+	}
+}

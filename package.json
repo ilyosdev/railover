@@ -1,6 +1,23 @@
 {
-    "name": "caprover",
-    "version": "0.0.0",
+    "name": "railover",
+    "version": "2.0.0",
+    "description": "Self-hosted VDS PaaS with Railway-like UX and team support",
+    "keywords": [
+        "paas",
+        "docker",
+        "self-hosted",
+        "deployment",
+        "multi-tenant",
+        "team",
+        "vds",
+        "cloud"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/ilyosdev/railover.git"
+    },
+    "author": "Railover Contributors",
+    "license": "MIT",
     "private": true,
     "scripts": {
         "disable-otp": "node ./built/scripts/disable-otp.js",
@@ -41,6 +58,8 @@
         "serve-favicon": "~2.5.1",
         "shell-quote": "^1.8.3",
         "simple-git": "^3.28.0",
+        "socket.io": "^4.8.3",
+        "socket.io-client": "^4.8.3",
         "ssh2": "^1.16.0",
         "tar": "^7.4.3",
         "typescript": "^5.8.3",
@@ -71,6 +90,7 @@
         "@types/require-from-string": "^1.2.3",
         "@types/serve-favicon": "^2.5.7",
         "@types/shell-quote": "^1.7.5",
+        "@types/socket.io": "^3.0.2",
         "@types/ssh2": "^1.15.5",
         "@types/tar": "^6.1.13",
         "@types/uuid": "^10.0.0",

@@ -18,6 +18,8 @@ import ProDataStore from './ProDataStore'
 import ProjectsDataStore from './ProjectsDataStore'
 import RegistriesDataStore from './RegistriesDataStore'
 
+type UserDefinition = import('../models/UserDefinition').UserDefinition
+
 // keys:
 const NAMESPACE = 'namespace'
 const HASHED_PASSWORD = 'hashedPassword'
@@ -465,6 +467,63 @@ class DataStore {
                 ? self.encryptor.encrypt(token)
                 : token
             self.data.set(GITHUB_TOKEN, encrypted)
+        })
+    }
+
+    saveUser(user: UserDefinition): Promise<UserDefinition> {
+        const self = this
+        return Promise.resolve().then(function () {
+            const users = self.data.get('users') || {}
+            users[user.id] = user
+            self.data.set('users', users)
+            return user
+        })
+    }
+
+    getUser(userId: string): Promise<UserDefinition | undefined> {
+        const self = this
+        return Promise.resolve().then(function () {
+            const users = self.data.get('users') || {}
+            return users[userId]
+        })
+    }
+
+    getUserByUsername(username: string): Promise<UserDefinition | undefined> {
+        const self = this
+        return Promise.resolve().then(function () {
+            const users = self.data.get('users') || {}
+            return Object.values(users).find(
+                (u: any) => u.username === username
+            ) as UserDefinition | undefined
+        })
+    }
+
+    getAllUsers(): Promise<UserDefinition[]> {
+        const self = this
+        return Promise.resolve().then(function () {
+            const users = self.data.get('users') || {}
+            return Object.values(users)
+        })
+    }
+
+    updateUser(user: UserDefinition): Promise<void> {
+        const self = this
+        return Promise.resolve().then(function () {
+            const users = self.data.get('users') || {}
+            if (!users[user.id]) {
+                throw new Error('User not found')
+            }
+            users[user.id] = user
+            self.data.set('users', users)
+        })
+    }
+
+    deleteUser(userId: string): Promise<void> {
+        const self = this
+        return Promise.resolve().then(function () {
+            const users = self.data.get('users') || {}
+            delete users[userId]
+            self.data.set('users', users)
         })
     }
 }

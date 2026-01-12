@@ -1,3 +1,40 @@
+## [2.0.0] - 2025-01-10
+
+### Major Release: VDS PaaS with Team Support
+
+#### New Features
+
+- 🎉 **Multi-user support** - Add team members with role-based access
+- 👥 **Team management UI** - Create, update, delete users
+- 🔐 **Role-based permissions** - Super Admin, Admin, Developer, Viewer
+- 📋 **Project collaborators** - Granular project-level access control
+- 📡 **Real-time logs** - WebSocket log streaming with Socket.IO
+- 🚀 **Easy installation** - One-command install script
+- 📦 **Docker Compose** - Easy setup with docker-compose
+- 📚 **New documentation** - Team management and installation guides
+
+#### Improvements
+
+- Better authentication with JWT
+- Enhanced security with password hashing
+- Improved UX with real-time updates
+- Cleaner project dashboard
+- Updated branding (Railover instead of CapRover)
+
+#### Breaking Changes
+
+- Default admin password is now generated randomly on install
+- User accounts required for team members
+- See migration guide for upgrading from v1.x
+
+#### Documentation
+
+- [Installation Guide](docs/INSTALL.md)
+- [Team Management Guide](docs/TEAM.md)
+- [API Reference](docs/API.md)
+
+---
+
 ## [Next Version - available as `edge`]
 
 - New: Ability to deploy simplified Docker compose [PR-191](https://github.com/caprover/caprover-frontend/pull/191)

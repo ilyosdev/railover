@@ -114,16 +114,25 @@ class Authenticator {
         })
     }
 
+    hashPassword(password: string): string {
+        return bcrypt.hashSync(
+            this.encryptionKey + password,
+            bcrypt.genSaltSync(10)
+        )
+    }
+
     getAuthTokenForCookies(
         otpConfig: OtpConfig,
         password: string,
-        savedHashedPassword: string
+        savedHashedPassword: string,
+        username?: string
     ) {
         return this.getAuthToken(
             otpConfig,
             password,
             savedHashedPassword,
-            COOKIE_AUTH_SUFFIX
+            COOKIE_AUTH_SUFFIX,
+            username
         )
     }
 
@@ -131,11 +140,11 @@ class Authenticator {
         otpConfig: OtpConfig,
         password: string,
         savedHashedPassword: string,
-        keySuffix?: string
+        keySuffix?: string,
+        username?: string
     ) {
         const self = this
 
-        // intentionally same error to avoid giving bad actors any hints
         const INVALID_CREDS_ERROR = 'Invalid credentials'
 
         return Promise.resolve()
@@ -164,6 +173,7 @@ class Authenticator {
                 const userObj: UserJwt = {
                     namespace: self.namespace,
                     tokenVersion: self.tokenVersion,
+                    username: username,
                 }
 
                 return jwt.sign(

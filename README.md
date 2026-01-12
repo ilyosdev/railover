@@ -1,61 +1,125 @@
 <div align="center">
-<h1>CapRover</h1>
-<a href="https://hub.docker.com/r/caprover/caprover/" target="_blank" title="Docker Pulls">
-<img src="https://img.shields.io/docker/pulls/caprover/caprover.svg" alt="Docker Pulls"/>
-</a>
-<a href="https://opencollective.com/caprover#backer" target="_blank" title="Open Collective backers and sponsors">
-<img src="https://img.shields.io/opencollective/all/caprover" alt="Open Collective backers and sponsors"/>
-</a>
-<a href="https://github.com/caprover/caprover/releases" target="_blank" title="GitHub release (latest by date)">
-<img src="https://img.shields.io/github/v/release/caprover/caprover" alt="GitHub release (latest by date)"/>
-</a>
+<h1>Railover</h1>
 
-Easiest app/database deployment platform and webserver package for your NodeJS, Python, PHP, Ruby, Go applications.
+<p>
+  <b>Deploy multiple projects on your own VDS for $50/month instead of $200/month on Railway</b>
+</p>
 
-No Docker, nginx knowledge required!
-
-<a href="https://youtu.be/VPHEXPfsvyQ" target="_blank" title="YouTube">
-<img src="https://raw.githubusercontent.com/caprover/caprover-website/master/graphics/screenshots-video-small.png" alt="YouTube"/>
-</a>
+<p>
+  <a href="https://hub.docker.com/r/ilyosdev/railover" target="_blank">
+    <img src="https://img.shields.io/docker/pulls/ilyosdev/railover.svg" alt="Docker Pulls"/>
+  </a>
+  <a href="https://github.com/ilyosdev/railover/stargazers" target="_blank">
+    <img src="https://img.shields.io/github/stars/ilyosdev/railover" alt="GitHub Stars"/>
+  </a>
+</p>
 </div>
 
-## What's this?
+---
 
-CapRover is an extremely easy to use app/database deployment & web server manager for your **NodeJS, Python, PHP, ASP.NET, Ruby, MariaDB, MySQL, MongoDB, Postgres, WordPress (and etc...)** applications!
+## 🚀 What is Railover?
 
-It's blazingly fast and very robust as it uses Docker, nginx, LetsEncrypt and NetData under the hood behind its simple-to-use interface.
+**Railover** is a self-hosted PaaS (Platform as a Service) that lets you deploy and manage multiple projects on your own VDS. It provides a Railway.app-like developer experience at a fraction of the cost.
 
-✔ CLI for automation and scripting
+### Why Railover?
 
-✔ Web GUI for ease of access and convenience
+- 💰 **Cost Effective**: Host 10+ projects for $50/month vs $200/month on Railway
+- 🎯 **Railway-like UX**: Project-centric dashboard, service types, one-click databases
+- 👥 **Team Support**: Multi-user with role-based access control
+- 🔐 **Self-Hosted**: Your data, your servers, full control
+- 🐳 **Docker Native**: Deploy any app that runs in Docker
+- 🔄 **Auto-Deploy**: GitHub integration with push-to-deploy
 
-✔ No lock-in! Remove CapRover and your apps keep working!
+### Perfect For
 
-✔ Docker Swarm under the hood for containerization and clustering
+- ✅ Startups managing multiple projects
+- ✅ Agencies hosting client applications
+- ✅ Developers wanting Railway UX without Railway costs
+- ✅ Teams needing isolated development environments
 
-✔ Nginx (fully customizable template) under the hood for load-balancing
+---
 
-✔ Let's Encrypt under the hood for free SSL (HTTPS)
+## 🎯 Key Features
 
-### Seriously! Who should care about CapRover?
+### Project Management
 
--   A [web] developer who does not like spending hours and days setting up a server, build tools, sending code to server, build it, get an SSL certificate, install it, update nginx over and over again.
--   A developer who uses expensive services like Heroku, Microsoft Azure and etc. And is interested in reducing their cost by 50x (Heroku charges 250USD/month for their 2gb instance, the same server is 5$ on Hetzner!!)
--   Someone who prefers to write more of `showResults(getUserList())` and not much of `$ apt-get install libstdc++6 > /dev/null`
--   A developer who likes installing MariaDB, MySQL, MongoDB and etc on their server by selecting from a dropdown and clicking on install!
--   How much server/docker/linux knowledge is required to set up a CapRover server? Answer: Knowledge of Copy & Paste!! Head over to "Getting Started" for information on what to copy & paste ;-)
+- 📊 Unified project dashboard for all your services
+- 🗂 Services organized by type (Frontend, Backend, Database, Worker)
+- 🔗 Visual service connections and dependencies
+- 📝 Hierarchical environment variables (project + service level)
 
-## Learn More!
+### Team Support
 
-For more details and documentation, please visit https://CapRover.com/
+- 👥 Multi-user access with authentication
+- 🔑 Role-based permissions (Super Admin, Admin, Developer, Viewer)
+- 📋 Project-level access control
+- 🛡️ Secure team collaboration
 
-## Contributors
+### Deployment
 
-CapRover exists thanks to all the great people who have contributed to this project. [[Contribute](CONTRIBUTING.md)].
-<a href="https://github.com/caprover/caprover/graphs/contributors"><img src="https://opencollective.com/caprover/contributors.svg?width=690&button=false" /></a>
+- 🚀 One-click database creation (PostgreSQL, MySQL, Redis, MongoDB)
+- 📦 Docker container deployment
+- 🔌 GitHub integration with webhooks
+- 📜 Build logs and deployment history
 
-## Financial Supporters
+### Infrastructure
 
-A big thank you to all our supporters! 🙏
+- 💾 Persistent volumes for databases
+- 🔒 SSL certificates (Let's Encrypt)
+- 🌐 Custom domains
+- 📊 Resource monitoring
 
-[![Donate](https://opencollective.com/caprover/donate/button.png?color=blue)](https://opencollective.com/caprover#backer)
+---
+
+## 📦 Quick Start
+
+### One-Command Install
+
+```bash
+curl -fsSL https://get.railover.com | sh
+```
+
+### Docker Compose
+
+```bash
+docker-compose up -d
+```
+
+### Manual Install
+
+```bash
+git clone https://github.com/ilyosdev/railover.git
+cd railover
+sudo ./scripts/install.sh
+```
+
+Access at: `http://your-server-ip`
+
+Default login: `admin` / `password` (see install logs)
+
+---
+
+## 📚 Documentation
+
+- [Installation Guide](docs/INSTALL.md)
+- [Team Management](docs/TEAM.md)
+- [Deployment Guide](docs/DEPLOY.md)
+- [API Reference](docs/API.md)
+
+---
+
+## 🤝 Contributing
+
+Contributions welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md)
+
+---
+
+## 📄 License
+
+MIT License - see [LICENSE](LICENSE)
+
+---
+
+<div align="center">
+  Made with ❤️ by the open source community
+</div>

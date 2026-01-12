@@ -1,4 +1,4 @@
-# AGENTS.md - CapRover Codebase Guide
+# AGENTS.md - Railover Codebase Guide
 
 > Guidelines for AI agents operating in this TypeScript/Node.js codebase (Docker deployment platform).
 
@@ -285,3 +285,37 @@ Logger.d('Debug message') // Debug
 Logger.e(error) // Error
 Logger.w('Warning') // Warning
 ```
+
+## Multi-User/Team Features
+
+### User Management
+
+- **Super Admin** role for VDS owner
+- **Admin/Developer/Viewer** roles for team members
+- User CRUD operations (Create, Read, Update, Delete)
+- Password hashing with bcryptjs
+
+### Permission System
+
+- Project-level access control
+- System-level permissions
+- Role-based authorization middleware
+
+### Team UI Components
+
+- `TeamManagement.tsx` - User management interface
+- `ProjectCollaborators.tsx` - Project-specific access control
+- `RealtimeLogs.tsx` - WebSocket log streaming
+
+### Authentication
+
+- JWT-based authentication
+- Role verification in routes
+- Session management
+
+### WebSocket Logs
+
+- Real-time log streaming via Socket.IO
+- Permission-based subscription
+- Auto-scroll and pause/resume
+- Log download functionality

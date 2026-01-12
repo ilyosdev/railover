@@ -1,5 +1,6 @@
 import { IAppEnvVar } from './AppDefinition'
 import { ServiceType } from './ServiceType'
+import { UserCollaborator } from './UserDefinition'
 
 export interface GitHubIntegration {
     repo: string
@@ -27,4 +28,6 @@ export interface ProjectDefinition {
     services?: ServiceReference[]
     createdAt?: string
     updatedAt?: string
+    ownerId?: string
+    collaborators?: UserCollaborator[]
 }

@@ -6,6 +6,7 @@ import { UserManager } from '../user/UserManager'
 export interface UserInjected {
     namespace: string
     userManager: UserManager
+    currentUsername?: string
 
     // @deprecated - use UserManager
     dataStore: DataStore

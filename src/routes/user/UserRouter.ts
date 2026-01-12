@@ -13,6 +13,7 @@ import ProjectsRouter from './ProjectsRouter'
 import RegistriesRouter from './registeries/RegistriesRouter'
 import SystemRouter from './system/SystemRouter'
 import GitHubRouter from './GitHubRouter'
+import UsersRouter from './UsersRouter'
 import onFinished = require('on-finished')
 import { IHashMapGeneric } from '../../models/ICacheGeneric'
 
@@ -138,5 +139,7 @@ router.use('/registries/', RegistriesRouter)
 router.use('/system/', SystemRouter)
 
 router.use('/pro/', ProRouter)
+
+router.use('/users/', UsersRouter)
 
 export default router
