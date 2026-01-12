@@ -2,6 +2,12 @@
 
 Complete guide for migrating from CapRover to Railover - either on your current VDS or a new server.
 
+> **Note:** CapRover data location varies by installation:
+> - Older installations: `/captain/data/`
+> - Newer installations: `/captain-data/`
+> 
+> Check which one you have: `ls -la /captain /captain-data 2>/dev/null`
+
 ## Table of Contents
 - [Option A: Upgrade on Same Server (Recommended)](#option-a-upgrade-on-same-server-recommended)
 - [Option B: Migrate to New Server](#option-b-migrate-to-new-server)
@@ -22,11 +28,15 @@ This is the safest option. Nothing is deleted - you're just swapping the Docker 
 ### Step 1: Backup (Optional but Recommended)
 
 ```bash
-# Create a backup of your config
-sudo cp -r /captain-data /captain-data-backup-$(date +%Y%m%d)
+# Find your data directory
+DATA_DIR=$(ls -d /captain-data 2>/dev/null || ls -d /captain/data 2>/dev/null)
+echo "Data directory: $DATA_DIR"
+
+# Create a backup
+sudo cp -r $DATA_DIR ${DATA_DIR}-backup-$(date +%Y%m%d)
 
 # Verify backup
-ls -la /captain-data-backup-*
+ls -la ${DATA_DIR}-backup-* 2>/dev/null || ls -la /captain/data-backup-* 2>/dev/null
 ```
 
 ### Step 2: Upgrade to Railover
@@ -47,15 +57,6 @@ That's it! Wait ~30 seconds for the service to restart.
 3. Verify all apps are listed
 4. Check one app is accessible
 
-### What Happens Behind the Scenes
-
-- Same `/captain-data` volume is used
-- Same Docker network, same ports
-- All app definitions preserved
-- All SSL certificates preserved
-- All environment variables preserved
-- Admin user auto-created on first login
-
 ---
 
 ## Option B: Migrate to New Server
@@ -63,15 +64,6 @@ That's it! Wait ~30 seconds for the service to restart.
 **Time required:** 15-30 minutes  
 **Downtime:** Depends on DNS propagation  
 **Risk:** Low (old server untouched)
-
-Use this when you want to move to a new VDS without touching the old one.
-
-### Prerequisites on New Server
-
-- Ubuntu 20.04+ or Debian 11+
-- Docker installed
-- Ports 80, 443, 3000 open
-- Domain DNS access
 
 ### Step 1: Backup from Old Server (Non-Destructive)
 
@@ -81,18 +73,26 @@ SSH into your **OLD** server:
 # Create backup directory
 mkdir -p ~/caprover-backup
 
-# Backup captain-data (configs, certs, app definitions)
-sudo tar -czf ~/caprover-backup/captain-data.tar.gz /captain-data
+# Find data directory (older vs newer installations)
+if [ -d "/captain-data" ]; then
+    DATA_DIR="/captain-data"
+elif [ -d "/captain/data" ]; then
+    DATA_DIR="/captain/data"
+else
+    echo "ERROR: Cannot find CapRover data directory"
+    exit 1
+fi
+
+echo "Found data at: $DATA_DIR"
+
+# Backup captain data (configs, certs, app definitions)
+sudo tar -czf ~/caprover-backup/captain-data.tar.gz -C $(dirname $DATA_DIR) $(basename $DATA_DIR)
 
 # List all Docker volumes (for databases/persistent apps)
-docker volume ls
+echo "=== Docker Volumes ==="
+docker volume ls | grep srv-captain
 
-# Backup each important volume (databases, uploads, etc.)
-# Replace VOLUME_NAME with actual volume names like:
-# - srv-captain--myapp-mysql
-# - srv-captain--myapp-postgres
-# - srv-captain--myapp-data
-
+# Backup each app volume (databases, uploads, etc.)
 for vol in $(docker volume ls -q | grep srv-captain); do
     echo "Backing up volume: $vol"
     docker run --rm \
@@ -102,20 +102,15 @@ for vol in $(docker volume ls -q | grep srv-captain); do
 done
 
 # Check backup sizes
+echo "=== Backup Files ==="
 ls -lh ~/caprover-backup/
 ```
 
 ### Step 2: Transfer to New Server
 
-From your **local machine** or **old server**:
-
 ```bash
-# Transfer all backups to new server
-scp -r ~/caprover-backup/* root@NEW_SERVER_IP:/root/caprover-backup/
-
-# Or if running from local machine:
-ssh old-server "cat ~/caprover-backup/captain-data.tar.gz" | \
-    ssh new-server "cat > /root/caprover-backup/captain-data.tar.gz"
+# From OLD server, copy to NEW server
+scp -r ~/caprover-backup/* root@NEW_SERVER_IP:~/caprover-backup/
 ```
 
 ### Step 3: Setup New Server
@@ -129,12 +124,21 @@ curl -fsSL https://get.docker.com | sh
 # Initialize Docker Swarm
 docker swarm init --advertise-addr $(hostname -I | awk '{print $1}')
 
-# Create backup directory and extract
-mkdir -p /root/caprover-backup
-cd /root/caprover-backup
+# Create directories
+mkdir -p ~/caprover-backup
+mkdir -p /captain-data
 
 # Extract captain-data
-sudo tar -xzf captain-data.tar.gz -C /
+cd ~/caprover-backup
+tar -xzf captain-data.tar.gz
+
+# Move to correct location (Railover uses /captain-data)
+# If backup was from /captain/data:
+if [ -d "data" ]; then
+    mv data/* /captain-data/
+elif [ -d "captain-data" ]; then
+    mv captain-data/* /captain-data/
+fi
 
 # Restore Docker volumes
 for backup in srv-captain--*.tar.gz; do
@@ -145,7 +149,7 @@ for backup in srv-captain--*.tar.gz; do
         docker run --rm \
             -v $vol_name:/dest \
             -v $(pwd):/backup:ro \
-            alpine tar -xzf /backup/$backup -C /dest
+            alpine sh -c "cd /dest && tar -xzf /backup/$backup"
     fi
 done
 ```
@@ -153,243 +157,145 @@ done
 ### Step 4: Start Railover
 
 ```bash
-# Pull required images
-docker pull ilyosdev/railover:dev
-docker pull caprover/certbot-sleeping:v2.11.0
-docker pull nginx:1.27.2
+# Create captain network
+docker network create --driver overlay captain-overlay-network 2>/dev/null || true
 
-# Start Railover
-docker run -d \
+# Start Railover as a service
+docker service create \
     --name captain-captain \
-    --restart always \
-    --network host \
-    -p 80:80 \
-    -p 443:443 \
-    -p 3000:3000 \
-    -v /var/run/docker.sock:/var/run/docker.sock \
-    -v /captain-data:/captain-data \
+    --network captain-overlay-network \
+    --publish 80:80 \
+    --publish 443:443 \
+    --publish 3000:3000 \
+    --constraint 'node.role == manager' \
+    --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock \
+    --mount type=bind,source=/captain-data,target=/captain-data \
     -e ACCEPTED_TERMS=true \
-    -e BY_PASS_PROXY_CHECK=true \
     ilyosdev/railover:dev
 
-# Wait for initialization
+# Wait for startup
+echo "Waiting for Railover to start..."
 sleep 30
 
-# Check if running
-docker ps | grep captain
+# Check status
+docker service ps captain-captain
 ```
 
 ### Step 5: Update DNS
 
-Update your domain's DNS A record to point to the **new server IP**.
+Update your domain's DNS A record:
 
-| Record Type | Name | Value |
-|-------------|------|-------|
-| A | *.your-captain-root.example.com | NEW_SERVER_IP |
-| A | your-captain-root.example.com | NEW_SERVER_IP |
-
-Wait for DNS propagation (5-30 minutes).
+| Type | Name | Old Value | New Value |
+|------|------|-----------|-----------|
+| A | *.captain.yourdomain.com | OLD_IP | NEW_IP |
+| A | captain.yourdomain.com | OLD_IP | NEW_IP |
 
 ### Step 6: Redeploy Apps
 
-Apps configs are restored, but containers need to be recreated:
-
-1. Login to Railover dashboard
-2. Go to each app → Deployment tab
-3. Click "Deploy" to rebuild from source, or
-4. If using pre-built images, the app should auto-start
-
-### Step 7: Verify Everything
-
-- [ ] Dashboard accessible
-- [ ] All apps listed
-- [ ] Apps are running (green status)
-- [ ] Custom domains working
-- [ ] SSL certificates valid
-- [ ] Databases have data
+After DNS propagates:
+1. Login to dashboard
+2. Go to each app → Deploy tab
+3. Click deploy or the apps may auto-start
 
 ---
 
 ## Rollback Procedure
 
-### On Same Server (Option A)
-
+### Same Server
 ```bash
-# Instant rollback to CapRover
+# Instant rollback
 docker service update --image caprover/caprover:latest captain-captain
-
-# Wait 30 seconds, then verify
-docker service ps captain-captain
 ```
 
-### On New Server (Option B)
-
-Simply point your DNS back to the old server IP. The old server was never modified.
+### New Server
+Just point DNS back to old server. Nothing was changed there.
 
 ---
 
 ## Post-Migration Setup
 
-### 1. Create Team Members (New Railover Feature)
+### New Railover Features
 
-```
-Dashboard → Team → Add Team Member
-```
+1. **Multi-User Team Management**
+   - Dashboard → Team → Add Team Member
+   - Roles: Super Admin, Admin, Developer, Viewer
 
-Roles available:
-- **Super Admin** - Full access
-- **Admin** - Manage apps and projects
-- **Developer** - Deploy and view logs
-- **Viewer** - Read-only access
+2. **Container Stats**
+   - Click any app → Overview → Resource Usage
+   - See CPU, Memory, Network in real-time
 
-### 2. Organize Apps into Projects (New Feature)
-
-```
-Dashboard → Projects → Create Project
-```
-
-Then assign apps to projects for better organization.
-
-### 3. View Container Stats (New Feature)
-
-Click on any app → Overview tab → Resource Usage section
-
-Shows real-time:
-- CPU usage
-- Memory usage
-- Network I/O
+3. **Project Organization**
+   - Dashboard → Projects → Create Project
+   - Group related apps together
 
 ---
 
 ## Troubleshooting
 
-### Login Fails After Migration
+### "Cannot find config file"
 
-**Problem:** Can't login with existing password
-
-**Solution:**
 ```bash
-# Check if admin user exists
-docker exec -it $(docker ps -q -f name=captain-captain) \
-    cat /captain-data/config-captain.json | grep -A5 '"users"'
+# Check where your data is
+ls -la /captain-data/config-captain.json
+ls -la /captain/data/config-captain.json
 
-# If empty, login once with just password (admin auto-created)
+# If in wrong location, move it
+mv /captain/data/* /captain-data/
 ```
 
-### Apps Not Starting
+### Login Fails
 
-**Problem:** Apps show as "not running"
+The first login creates an `admin` user automatically.
+- Username: `admin`
+- Password: Your existing CapRover password
 
-**Solution:**
+### Apps Not Starting After Migration
+
 ```bash
-# Force redeploy all services
+# List services
+docker service ls
+
+# Force redeploy all app services
 docker service ls | grep srv-captain | awk '{print $2}' | \
     xargs -I {} docker service update --force {}
 ```
 
-### SSL Certificate Errors
-
-**Problem:** SSL warnings after migration to new server
-
-**Solution:**
-```bash
-# Re-enable SSL for the root domain
-# Dashboard → Settings → Enable HTTPS
-
-# For individual apps:
-# App → HTTP Settings → Enable HTTPS
-```
-
-### Database Connection Refused
-
-**Problem:** App can't connect to database after migration
-
-**Solution:**
-1. Verify database volume was restored
-2. Check database container is running
-3. Verify environment variables in app settings
+### Volume Mount Errors
 
 ```bash
-# Check database container
-docker ps | grep mysql  # or postgres, mongo, etc.
+# List volumes
+docker volume ls
 
-# Check volume exists
-docker volume ls | grep YOUR_DB_NAME
+# Check if volume has data
+docker run --rm -v VOLUME_NAME:/data alpine ls -la /data
 ```
-
-### Port Already in Use
-
-**Problem:** "port is already allocated" error
-
-**Solution:**
-```bash
-# Find what's using the port
-sudo lsof -i :80
-sudo lsof -i :443
-sudo lsof -i :3000
-
-# Stop conflicting service
-sudo systemctl stop nginx  # if nginx is running outside Docker
-sudo systemctl stop apache2  # if apache is running
-```
-
----
-
-## Comparison: CapRover vs Railover
-
-| Feature | CapRover | Railover |
-|---------|----------|----------|
-| Single Admin | ✅ | ✅ |
-| Multi-User | ❌ | ✅ |
-| Team Roles | ❌ | ✅ |
-| Project Organization | ❌ | ✅ |
-| Container Stats | ❌ | ✅ |
-| Realtime Logs | Basic | Enhanced |
-| Collaborators | ❌ | ✅ |
-| Data Compatible | - | ✅ 100% |
 
 ---
 
 ## Quick Reference
 
-### Upgrade Commands
-
 ```bash
 # Upgrade to Railover
 docker service update --image ilyosdev/railover:dev captain-captain
 
-# Rollback to CapRover
+# Rollback to CapRover  
 docker service update --image caprover/caprover:latest captain-captain
 
-# Force restart
-docker service update --force captain-captain
-
 # View logs
-docker service logs captain-captain --tail 100 -f
+docker service logs captain-captain -f --tail 100
+
+# Restart
+docker service update --force captain-captain
 ```
 
-### Important Paths
+## Data Paths
 
-| Path | Contents |
-|------|----------|
-| `/captain-data/` | All configs and data |
-| `/captain-data/config-captain.json` | Main configuration |
-| `/captain-data/letsencrypt/` | SSL certificates |
-| `/captain-data/nginx/` | Nginx configs |
-
-### Docker Service Names
-
-| Service | Purpose |
-|---------|---------|
-| `captain-captain` | Main Railover backend + frontend |
-| `captain-nginx` | Reverse proxy |
-| `captain-certbot` | SSL certificate manager |
-| `srv-captain--*` | Your deployed apps |
+| Installation | Config Path |
+|-------------|-------------|
+| Older CapRover | `/captain/data/config-captain.json` |
+| Newer CapRover | `/captain-data/config-captain.json` |
+| Railover | `/captain-data/config-captain.json` |
 
 ---
 
-## Support
-
-- GitHub Issues: https://github.com/ilyosdev/railover/issues
-- Documentation: https://github.com/ilyosdev/railover/blob/master/README.md
-
+**GitHub:** https://github.com/ilyosdev/railover
