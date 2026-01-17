@@ -79,59 +79,54 @@ router.post('/', function (req, res, next) {
                     'Too many wrong passwords... Wait for 30 seconds and retry.'
                 )
 
-            if (username) {
-                return dataStore
-                    .getUserByUsername(username)
-                    .then(function (user) {
-                        if (!user) {
-                            throw ApiStatusCodes.createError(
-                                ApiStatusCodes.STATUS_WRONG_PASSWORD,
-                                'Invalid credentials'
-                            )
-                        }
-                        loginUsername = user.username
-                        return user.passwordHash
-                    })
-            }
+            const targetUsername = username || 'admin'
+            loginUsername = targetUsername
 
-            loginUsername = 'admin'
             return dataStore
-                .getUserByUsername('admin')
-                .then(function (existingAdmin) {
-                    if (!existingAdmin) {
-                        return dataStore
-                            .getHashedPassword()
-                            .then(function (hashedPwd) {
-                                const adminUser = {
-                                    id: uuid(),
-                                    username: 'admin',
-                                    email: 'admin@localhost',
-                                    passwordHash: hashedPwd,
-                                    role: UserRole.SUPER_ADMIN,
-                                    permissions: {
-                                        projects: [],
-                                        projectActions: {
-                                            canCreate: true,
-                                            canDelete: true,
-                                            canDeploy: true,
-                                        },
-                                        system: {
-                                            canManageUsers: true,
-                                            canManageSettings: true,
-                                            canViewLogs: true,
-                                            canManageDatabases: true,
-                                        },
-                                    },
-                                    createdAt: new Date().toISOString(),
-                                }
-                                return dataStore
-                                    .saveUser(adminUser)
-                                    .then(function () {
-                                        return hashedPwd
-                                    })
-                            })
+                .getUserByUsername(targetUsername)
+                .then(function (user) {
+                    if (user) {
+                        return user.passwordHash
                     }
-                    return existingAdmin.passwordHash
+
+                    if (targetUsername !== 'admin') {
+                        throw ApiStatusCodes.createError(
+                            ApiStatusCodes.STATUS_WRONG_PASSWORD,
+                            'Invalid credentials'
+                        )
+                    }
+
+                    return dataStore
+                        .getHashedPassword()
+                        .then(function (hashedPwd) {
+                            const adminUser = {
+                                id: uuid(),
+                                username: 'admin',
+                                email: 'admin@localhost',
+                                passwordHash: hashedPwd,
+                                role: UserRole.SUPER_ADMIN,
+                                permissions: {
+                                    projects: [],
+                                    projectActions: {
+                                        canCreate: true,
+                                        canDelete: true,
+                                        canDeploy: true,
+                                    },
+                                    system: {
+                                        canManageUsers: true,
+                                        canManageSettings: true,
+                                        canViewLogs: true,
+                                        canManageDatabases: true,
+                                    },
+                                },
+                                createdAt: new Date().toISOString(),
+                            }
+                            return dataStore
+                                .saveUser(adminUser)
+                                .then(function () {
+                                    return hashedPwd
+                                })
+                        })
                 })
         })
         .then(function (savedHashedPassword) {

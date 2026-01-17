@@ -4,6 +4,7 @@ import BaseApi from '../../api/BaseApi'
 import InjectionExtractor from '../../injection/InjectionExtractor'
 import { UserRole } from '../../models/UserDefinition'
 import { UserManagerExtended } from '../../user/UserManagerExtended'
+import Authenticator from '../../user/Authenticator'
 
 const router = express.Router()
 
@@ -155,7 +156,7 @@ router.get('/', requireSuperAdmin, function (req, res, next) {
         .catch(ApiStatusCodes.createCatcher(res))
 })
 
-router.put('/:userId/role', requireSuperAdmin, function (req, res, next) {
+function updateRoleHandler(req: express.Request, res: express.Response) {
     const injected = InjectionExtractor.extractUserFromInjected(res)
     const dataStore = injected.user.dataStore
     const currentUser = res.locals.currentUser
@@ -177,7 +178,10 @@ router.put('/:userId/role', requireSuperAdmin, function (req, res, next) {
             )
         })
         .catch(ApiStatusCodes.createCatcher(res))
-})
+}
+
+router.put('/:userId/role', requireSuperAdmin, updateRoleHandler)
+router.post('/:userId/role', requireSuperAdmin, updateRoleHandler)
 
 function deleteUserHandler(req: express.Request, res: express.Response) {
     const injected = InjectionExtractor.extractUserFromInjected(res)
@@ -204,6 +208,53 @@ function deleteUserHandler(req: express.Request, res: express.Response) {
 
 router.delete('/:userId', requireSuperAdmin, deleteUserHandler)
 router.post('/:userId/delete', requireSuperAdmin, deleteUserHandler)
+
+router.post('/:userId/password', requireSuperAdmin, function (req, res, next) {
+    const injected = InjectionExtractor.extractUserFromInjected(res)
+    const dataStore = injected.user.dataStore
+    const namespace = injected.user.namespace
+
+    const userId = `${req.params.userId || ''}`
+    const newPassword = `${req.body.password || ''}`
+
+    if (!newPassword || newPassword.length < 4) {
+        return res.send(
+            ApiStatusCodes.createError(
+                ApiStatusCodes.ILLEGAL_PARAMETER,
+                'Password must be at least 4 characters'
+            )
+        )
+    }
+
+    Promise.resolve()
+        .then(function () {
+            return dataStore.getUser(userId)
+        })
+        .then(function (user) {
+            if (!user) {
+                throw ApiStatusCodes.createError(
+                    ApiStatusCodes.NOT_FOUND,
+                    'User not found'
+                )
+            }
+
+            const newHash =
+                Authenticator.getAuthenticator(namespace).hashPassword(
+                    newPassword
+                )
+            user.passwordHash = newHash
+            return dataStore.saveUser(user)
+        })
+        .then(function () {
+            res.send(
+                new BaseApi(
+                    ApiStatusCodes.STATUS_OK,
+                    'Password updated successfully'
+                )
+            )
+        })
+        .catch(ApiStatusCodes.createCatcher(res))
+})
 
 router.get(
     '/projects/:projectId/collaborators',
@@ -328,6 +379,78 @@ router.get('/projects', function (req, res, next) {
             )
             response.data = { projects }
             res.send(response)
+        })
+        .catch(ApiStatusCodes.createCatcher(res))
+})
+
+router.post('/me/changepassword', function (req, res, next) {
+    const injected = InjectionExtractor.extractUserFromInjected(res)
+    const dataStore = injected.user.dataStore
+    const namespace = injected.user.namespace
+    const currentUsername = injected.user.currentUsername || 'admin'
+    const oldPassword = `${req.body.oldPassword || ''}`
+    const newPassword = `${req.body.newPassword || ''}`
+
+    if (!oldPassword || !newPassword) {
+        return res.send(
+            ApiStatusCodes.createError(
+                ApiStatusCodes.ILLEGAL_PARAMETER,
+                'Old password and new password are required'
+            )
+        )
+    }
+
+    if (newPassword.length < 8) {
+        return res.send(
+            ApiStatusCodes.createError(
+                ApiStatusCodes.ILLEGAL_PARAMETER,
+                'New password must be at least 8 characters'
+            )
+        )
+    }
+
+    let currentUser: any
+
+    Promise.resolve()
+        .then(function () {
+            return dataStore.getUserByUsername(currentUsername)
+        })
+        .then(function (user) {
+            if (!user) {
+                throw ApiStatusCodes.createError(
+                    ApiStatusCodes.STATUS_ERROR_NOT_AUTHORIZED,
+                    'User not found'
+                )
+            }
+            currentUser = user
+
+            const authenticator = Authenticator.getAuthenticator(namespace)
+            return authenticator.isPasswordCorrect(
+                oldPassword,
+                currentUser.passwordHash
+            )
+        })
+        .then(function (isCorrect) {
+            if (!isCorrect) {
+                throw ApiStatusCodes.createError(
+                    ApiStatusCodes.STATUS_WRONG_PASSWORD,
+                    'Old password is incorrect'
+                )
+            }
+
+            const authenticator = Authenticator.getAuthenticator(namespace)
+            const newHash = authenticator.hashPassword(newPassword)
+
+            currentUser.passwordHash = newHash
+            return dataStore.saveUser(currentUser)
+        })
+        .then(function () {
+            res.send(
+                new BaseApi(
+                    ApiStatusCodes.STATUS_OK,
+                    'Password changed successfully'
+                )
+            )
         })
         .catch(ApiStatusCodes.createCatcher(res))
 })

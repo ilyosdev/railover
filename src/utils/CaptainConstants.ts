@@ -45,7 +45,7 @@ const configs = {
 
     registryImageName: 'registry:2',
 
-    appPlaceholderImageName: 'caprover/caprover-placeholder-app:latest',
+    appPlaceholderImageName: 'ilyosdev/railover-placeholder:latest',
 
     nginxImageName: 'nginx:1.27.2',
 

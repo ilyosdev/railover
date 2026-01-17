@@ -231,8 +231,17 @@ app.use(API_PREFIX + CaptainConstants.apiVersion + '/user/', UserRouter)
 
 //  *********************  End of API End Points  *******************************************
 
-// catch 404 and forward to error handler
+// SPA fallback - serve index.html for frontend routes
 app.use(function (req, res, next) {
+    if (
+        !req.originalUrl.startsWith('/api/') &&
+        !req.originalUrl.startsWith(CaptainConstants.netDataRelativePath) &&
+        req.method === 'GET'
+    ) {
+        res.sendFile(path.join(__dirname, '../public', 'index.html'))
+        return
+    }
+
     res.locals.err = new Error('Not Found')
     res.locals.err.errorStatus = 404
     next(res.locals.err)

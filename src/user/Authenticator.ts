@@ -107,10 +107,18 @@ class Authenticator {
                 throw new Error('Encryption key is not set!')
             }
 
-            return bcrypt.compareSync(
-                self.encryptionKey + password,
-                savedHashedPassword
-            )
+            // Try new method first (with encryption key)
+            if (
+                bcrypt.compareSync(
+                    self.encryptionKey + password,
+                    savedHashedPassword
+                )
+            ) {
+                return true
+            }
+
+            // Backward compatibility: try without encryption key (old CapRover method)
+            return bcrypt.compareSync(password, savedHashedPassword)
         })
     }
 
