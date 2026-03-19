@@ -27,10 +27,11 @@ export default class ProManager {
     }
 
     private static getBaseUrl() {
+        const domains = CaptainConstants.configs.proApiDomains
+        if (!domains || domains.length === 0) return ''
         return (
-            CaptainConstants.configs.proApiDomains[
-                ProManager.activeApiIndex %
-                    CaptainConstants.configs.proApiDomains.length
+            domains[
+                ProManager.activeApiIndex % domains.length
             ] + '/api/v1'
         )
     }
@@ -41,6 +42,11 @@ export default class ProManager {
         data: any,
         apiKeyOverride?: string
     ) {
+        // AppX: skip all external Pro API calls when no domains configured
+        if (!CaptainConstants.configs.proApiDomains?.length) {
+            return Promise.resolve({ data: {} })
+        }
+
         const self = this
         return Promise.resolve()
             .then(function () {
@@ -249,6 +255,11 @@ export default class ProManager {
     }
 
     reportUnAuthAnalyticsEvent(event: ICapRoverEvent) {
+        // AppX: analytics disabled — no external calls
+        if (!CaptainConstants.configs.analyticsDomain) {
+            return Promise.resolve()
+        }
+
         const self = this
         return Promise.resolve()
             .then(function () {
@@ -264,7 +275,7 @@ export default class ProManager {
                 })
             })
             .then(function (axiosResponse) {
-                return axiosResponse.data // actual HTTP response data
+                return axiosResponse.data
             })
             .then(function (data) {
                 if (data.status && data.status !== 100) {
@@ -275,7 +286,7 @@ export default class ProManager {
                 }
 
                 if (!data.data) throw new Error('Unexpected Pro API response')
-                return data.data // pulling out data part of CapRover Pro API response
+                return data.data
             })
             .catch((err) => {
                 Logger.e(err, 'reportUnAuthAnalyticsEvent failed!')

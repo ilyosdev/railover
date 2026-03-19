@@ -37,9 +37,10 @@ const configs = {
 
     dockerApiVersion: 'v1.44',
 
-    netDataImageName: 'caprover/netdata:v1.34.1',
+    // Monitoring disabled for AppX — not needed
+    netDataImageName: '',
 
-    goAccessImageName: 'caprover/goaccess:1.9.4',
+    goAccessImageName: '',
 
     goAccessAnonymizeIP: false,
 
@@ -49,17 +50,18 @@ const configs = {
 
     nginxImageName: 'nginx:1.27.2',
 
-    defaultEmail: 'runner@caprover.com',
+    defaultEmail: 'deploy@appx.uz',
 
-    captainSubDomain: 'captain',
+    captainSubDomain: 'railover',
 
     overlayNetworkOverride: {},
 
     useExistingSwarm: false,
 
-    proApiDomains: ['https://pro.caprover.com'],
+    // External CapRover APIs disabled for AppX
+    proApiDomains: [] as string[],
 
-    analyticsDomain: 'https://analytics-v1.caprover.com',
+    analyticsDomain: '',
 
     certbotImageName: 'caprover/certbot-sleeping:v2.11.0',
 

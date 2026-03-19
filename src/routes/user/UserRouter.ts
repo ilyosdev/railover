@@ -7,12 +7,13 @@ import Authenticator from '../../user/Authenticator'
 import EnvVars from '../../utils/EnvVars'
 import Utils from '../../utils/Utils'
 import AppsRouter from './apps/AppsRouter'
-import OneClickAppRouter from './oneclick/OneClickAppRouter'
-import ProRouter from './pro/ProRouter'
+// AppX: OneClick, Pro, GitHub routers disabled — not needed for container management
+// import OneClickAppRouter from './oneclick/OneClickAppRouter'
+// import ProRouter from './pro/ProRouter'
+// import GitHubRouter from './GitHubRouter'
 import ProjectsRouter from './ProjectsRouter'
 import RegistriesRouter from './registeries/RegistriesRouter'
 import SystemRouter from './system/SystemRouter'
-import GitHubRouter from './GitHubRouter'
 import UsersRouter from './UsersRouter'
 import onFinished = require('on-finished')
 import { IHashMapGeneric } from '../../models/ICacheGeneric'
@@ -130,15 +131,14 @@ router.use('/apps/', AppsRouter)
 
 router.use('/projects/', ProjectsRouter)
 
-router.use('/github/', GitHubRouter)
-
-router.use('/oneclick/', OneClickAppRouter)
+// AppX: disabled — not needed for bundle-server container management
+// router.use('/github/', GitHubRouter)
+// router.use('/oneclick/', OneClickAppRouter)
+// router.use('/pro/', ProRouter)
 
 router.use('/registries/', RegistriesRouter)
 
 router.use('/system/', SystemRouter)
-
-router.use('/pro/', ProRouter)
 
 router.use('/users/', UsersRouter)
 

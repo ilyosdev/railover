@@ -1,8 +1,6 @@
 import request = require('request')
-import axios from 'axios'
 import DockerApi from '../../docker/DockerApi'
 import CaptainConstants from '../../utils/CaptainConstants'
-import Logger from '../../utils/Logger'
 import DockerRegistryHelper from '../DockerRegistryHelper'
 
 class VersionManager {
@@ -20,44 +18,13 @@ class VersionManager {
         changeLogMessage: string
         canUpdate: boolean
     }> {
-        // reach out to api.v2.caprover.com/v2/versionInfo?currentVersion=1.5.3
-        // response should be currentVersion, latestVersion, canUpdate, and changeLogMessage
-
-        return Promise.resolve() //
-            .then(function () {
-                return axios.get('https://api-v1.caprover.com/v2/versionInfo', {
-                    params: {
-                        currentVersion: currentVersion,
-                    },
-                })
-            })
-            .then(function (responseObj) {
-                const resp = responseObj.data
-
-                if (resp.status !== 100) {
-                    throw new Error(
-                        `Bad response from the upstream version info: ${resp.status}`
-                    )
-                }
-
-                const data = resp.data
-
-                return {
-                    currentVersion: data.currentVersion + '',
-                    latestVersion: data.latestVersion + '',
-                    changeLogMessage: data.changeLogMessage + '',
-                    canUpdate: !!data.canUpdate,
-                }
-            })
-            .catch(function (error) {
-                Logger.e(error)
-                return Promise.resolve({
-                    currentVersion: currentVersion + '',
-                    latestVersion: currentVersion + '',
-                    changeLogMessage: '',
-                    canUpdate: false,
-                })
-            })
+        // AppX: no external version check — always report current as latest
+        return Promise.resolve({
+            currentVersion: currentVersion,
+            latestVersion: currentVersion,
+            changeLogMessage: '',
+            canUpdate: false,
+        })
     }
 
     getCaptainImageTags() {

@@ -8,7 +8,11 @@ import EnvVar from '../utils/EnvVars'
 import Logger from '../utils/Logger'
 import bcrypt = require('bcryptjs')
 
-const captainDefaultPassword = EnvVar.DEFAULT_PASSWORD ?? 'captain42'
+const captainDefaultPassword = EnvVar.DEFAULT_PASSWORD || (() => {
+    const generated = randomBytes(16).toString('hex')
+    Logger.w(`⚠️  No DEFAULT_PASSWORD env var set! Generated random password: ${generated}`)
+    return generated
+})()
 
 const COOKIE_AUTH_SUFFIX = 'cookie-'
 const WEBHOOK_APP_PUSH_SUFFIX = '-webhook-app-push'
