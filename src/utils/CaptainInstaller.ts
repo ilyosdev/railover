@@ -510,7 +510,14 @@ export function install() {
                         MemoryBytes: 100 * 1024 * 1024,
                     },
                 }
-            )
+            ).catch(function (err: any) {
+                // Handle "service already exists" (409) — skip creation
+                if (err && err.statusCode === 409) {
+                    console.log('Captain service already exists, skipping creation...')
+                    return
+                }
+                throw err
+            })
         })
         .then(function () {
             console.log('*** CapRover is initializing ***')
