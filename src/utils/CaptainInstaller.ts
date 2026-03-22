@@ -399,7 +399,14 @@ export function install() {
             if (CaptainConstants.configs.useExistingSwarm) {
                 return DockerApi.get().ensureSwarmExists()
             }
-            return DockerApi.get().initSwarm(myIp4)
+            return DockerApi.get().initSwarm(myIp4).catch(function (err: any) {
+                // Handle "already part of a swarm" (503) — use existing swarm
+                if (err && err.statusCode === 503) {
+                    console.log('Swarm already exists, using existing swarm...')
+                    return DockerApi.get().ensureSwarmExists()
+                }
+                throw err
+            })
         })
         .then(function (swarmId: string) {
             console.log(`Swarm started: ${swarmId}`)
