@@ -83,6 +83,11 @@ if (CaptainConstants.isDebug) {
 app.use(Injector.injectGlobal())
 
 app.use(function (req, res, next) {
+    // Skip SSL redirect for health check (used by internal localhost monitoring)
+    if (req.originalUrl === CaptainConstants.healthCheckEndPoint) {
+        return next()
+    }
+
     if (InjectionExtractor.extractGlobalsFromInjected(res).forceSsl) {
         const isRequestSsl =
             req.secure || req.get('X-Forwarded-Proto') === 'https'
