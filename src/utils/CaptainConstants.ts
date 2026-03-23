@@ -17,7 +17,7 @@ const CONSTANT_FILE_OVERRIDE_USER =
 const configs = {
     publishedNameOnDockerHub: 'ilyosdev/railover',
 
-    version: '2.0.0',
+    version: 'appx',
 
     defaultMaxLogSize: '512m',
 

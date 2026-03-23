@@ -29,8 +29,8 @@ import fs = require('fs-extra')
 
 const DEBUG_SALT = 'THIS IS NOT A REAL CERTIFICATE'
 
-const MAX_FAIL_ALLOWED = 4
-const HEALTH_CHECK_INTERVAL = 20000 // ms
+const MAX_FAIL_ALLOWED = 10
+const HEALTH_CHECK_INTERVAL = 30000 // ms
 const TIMEOUT_HEALTH_CHECK = 15000 // ms
 interface ISuccessCallback {
     (success: boolean): void
@@ -337,7 +337,7 @@ class CaptainManager {
                 return
             }
 
-            const url = `http://${captainPublicDomain}${CaptainConstants.healthCheckEndPoint}`
+            const url = `http://localhost:${CaptainConstants.configs.adminPortNumber3000}${CaptainConstants.healthCheckEndPoint}`
 
             request(
                 url,
