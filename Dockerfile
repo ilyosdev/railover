@@ -24,7 +24,7 @@ RUN npx tsc && echo "Backend build successful"
 # ── Stage 3: Production image ────────────────────────────────────
 FROM node:18-alpine AS production
 
-RUN apk update && apk add --no-cache git openssh-client && rm -rf /var/cache/apk/*
+RUN apk update && apk add --no-cache git openssh-client openssl && rm -rf /var/cache/apk/*
 
 WORKDIR /usr/src/app
 
