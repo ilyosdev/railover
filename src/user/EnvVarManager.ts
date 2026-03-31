@@ -219,7 +219,8 @@ class EnvVarManager {
                     app.preDeployFunction || '',
                     app.serviceUpdateOverride || '',
                     app.websocketSupport,
-                    app.appDeployTokenConfig || { enabled: false }
+                    app.appDeployTokenConfig || { enabled: false },
+                    app.serviceType
                 )
             })
             .then(function () {
@@ -272,7 +273,8 @@ class EnvVarManager {
                     app.preDeployFunction || '',
                     app.serviceUpdateOverride || '',
                     app.websocketSupport,
-                    app.appDeployTokenConfig || { enabled: false }
+                    app.appDeployTokenConfig || { enabled: false },
+                    app.serviceType
                 )
             })
             .then(function () {

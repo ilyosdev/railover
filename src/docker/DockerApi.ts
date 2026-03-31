@@ -1,6 +1,7 @@
 import Base64Provider = require('js-base64')
 import Docker = require('dockerode')
 import { v4 as uuid } from 'uuid'
+import ApiStatusCodes from '../api/ApiStatusCodes'
 import {
     IAppDef,
     IAppEnvVar,
@@ -1751,10 +1752,14 @@ class DockerApi {
 
     getLogForService(serviceName: string, tailCount: number, encoding: string) {
         const self = this
-        return Promise.resolve() //
+        return Promise.resolve()
+            .then(function () {
+                // First check if service exists
+                return self.dockerode.getService(serviceName).inspect()
+            })
             .then(function () {
                 return self.dockerode
-                    .getService(serviceName) //
+                    .getService(serviceName)
                     .logs({
                         tail: tailCount,
                         follow: false,
@@ -1770,9 +1775,17 @@ class DockerApi {
                     return data.toString(encoding as any)
                 }
 
-                throw new Error(
-                    'Logs are not instance of Buffer! Cannot be parsed!!'
-                )
+                // Return empty string if no logs instead of throwing
+                return ''
+            })
+            .catch(function (err: any) {
+                if (err.statusCode === 404) {
+                    throw ApiStatusCodes.createError(
+                        ApiStatusCodes.NOT_FOUND,
+                        `Service "${serviceName}" not found. It may not be deployed yet.`
+                    )
+                }
+                throw err
             })
     }
 

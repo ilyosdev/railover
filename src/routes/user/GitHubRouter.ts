@@ -377,6 +377,7 @@ router.post('/connect-repo', function (req, res, next) {
             return updateAppDefinition(
                 {
                     appName: appName,
+                    projectId: app.projectId,
                     repoInfo: repoInfo,
                 },
                 serviceManager

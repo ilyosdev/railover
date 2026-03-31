@@ -13,6 +13,7 @@ import {
 } from '../models/AppDefinition'
 import { DockerAuthObj } from '../models/DockerAuthObj'
 import { IHashMapGeneric } from '../models/ICacheGeneric'
+import { ServiceType } from '../models/ServiceType'
 import { IImageSource } from '../models/IImageSource'
 import { PreDeployFunction } from '../models/OtherTypes'
 import CaptainConstants from '../utils/CaptainConstants'
@@ -395,6 +396,32 @@ class ServiceManager {
             })
     }
 
+    /**
+     * Force-enable SSL for an app without running Certbot.
+     * Used when a wildcard origin certificate is already in place (e.g., Cloudflare Origin CA).
+     * Skips domain verification and certificate request — just sets the flag and reloads Nginx.
+     */
+    forceEnableSslForApp(appName: string) {
+        const self = this
+
+        return Promise.resolve()
+            .then(function () {
+                // Ensure the app exists
+                return self.dataStore
+                    .getAppsDataStore()
+                    .getAppDefinition(appName)
+            })
+            .then(function () {
+                Logger.d(`Force-enabling SSL for: ${appName} (wildcard cert)`)
+                return self.dataStore
+                    .getAppsDataStore()
+                    .setSslForDefaultSubDomain(appName, true)
+            })
+            .then(function () {
+                return self.reloadLoadBalancer()
+            })
+    }
+
     verifyCaptainOwnsGenericSubDomain(appName: string) {
         const self = this
 
@@ -626,7 +653,8 @@ class ServiceManager {
         preDeployFunction: string,
         serviceUpdateOverride: string,
         websocketSupport: boolean,
-        appDeployTokenConfig: AppDeployTokenConfig
+        appDeployTokenConfig: AppDeployTokenConfig,
+        serviceType?: ServiceType
     ) {
         const self = this
         const dataStore = this.dataStore
@@ -766,7 +794,8 @@ class ServiceManager {
                         preDeployFunction,
                         serviceUpdateOverride,
                         websocketSupport,
-                        appDeployTokenConfig
+                        appDeployTokenConfig,
+                        serviceType
                     )
             })
             .then(function () {
@@ -816,7 +845,8 @@ class ServiceManager {
                                 existingAppDefinition.websocketSupport,
                                 existingAppDefinition.appDeployTokenConfig || {
                                     enabled: false,
-                                }
+                                },
+                                existingAppDefinition.serviceType
                             )
                             .then(function () {
                                 self.reloadLoadBalancer()
@@ -828,6 +858,61 @@ class ServiceManager {
                 }
 
                 throw error
+            })
+    }
+
+    scaleApp(appName: string, instanceCount: number) {
+        const self = this
+        const dataStore = this.dataStore
+
+        Logger.d(`Scaling app ${appName} to ${instanceCount} instances`)
+
+        return Promise.resolve()
+            .then(function () {
+                // Verify the app exists
+                return dataStore.getAppsDataStore().getAppDefinition(appName)
+            })
+            .then(function (app) {
+                // Use the existing updateAppDefinition flow which handles
+                // both Docker service update and datastore persistence
+                return dataStore
+                    .getAppsDataStore()
+                    .updateAppDefinitionInDb(
+                        appName,
+                        app.projectId || '',
+                        app.description || '',
+                        instanceCount,
+                        app.captainDefinitionRelativeFilePath,
+                        app.envVars,
+                        app.volumes,
+                        app.tags || [],
+                        app.nodeId || '',
+                        app.notExposeAsWebApp,
+                        app.containerHttpPort || 80,
+                        app.httpAuth,
+                        app.forceSsl,
+                        app.ports,
+                        app.appPushWebhook?.repoInfo || {
+                            repo: '',
+                            branch: '',
+                            user: '',
+                            password: '',
+                        },
+                        self.authenticator,
+                        app.customNginxConfig || '',
+                        app.redirectDomain || '',
+                        app.preDeployFunction || '',
+                        app.serviceUpdateOverride || '',
+                        app.websocketSupport,
+                        app.appDeployTokenConfig || {
+                            enabled: false,
+                        },
+                        app.serviceType
+                    )
+            })
+            .then(function () {
+                // Apply the change to the running Docker service
+                return self.ensureServiceInitedAndUpdated(appName)
             })
     }
 

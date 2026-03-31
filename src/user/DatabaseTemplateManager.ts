@@ -207,6 +207,7 @@ class DatabaseTemplateManager {
                             { tagName: 'database' },
                             { tagName: template.type },
                         ],
+                        serviceType: ServiceType.DATABASE,
                     },
                     self.serviceManager
                 ).then(function () {

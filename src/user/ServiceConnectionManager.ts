@@ -100,7 +100,8 @@ class ServiceConnectionManager {
                     fromApp.preDeployFunction || '',
                     fromApp.serviceUpdateOverride || '',
                     fromApp.websocketSupport,
-                    fromApp.appDeployTokenConfig || { enabled: false }
+                    fromApp.appDeployTokenConfig || { enabled: false },
+                    fromApp.serviceType
                 )
             })
             .then(function () {

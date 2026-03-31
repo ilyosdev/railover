@@ -14,6 +14,7 @@ import {
     IHttpAuth,
     RepoInfo,
 } from '../../../../models/AppDefinition'
+import { ServiceType } from '../../../../models/ServiceType'
 import { BaseHandlerResult } from '../../../BaseHandlerResult'
 
 export interface RegisterAppDefinitionParams {
@@ -161,6 +162,7 @@ export interface UpdateAppDefinitionParams {
     serviceUpdateOverride?: string
     websocketSupport?: boolean
     appDeployTokenConfig?: AppDeployTokenConfig
+    serviceType?: ServiceType
 }
 
 export async function updateAppDefinition(
@@ -189,6 +191,7 @@ export async function updateAppDefinition(
         serviceUpdateOverride,
         websocketSupport,
         appDeployTokenConfig,
+        serviceType,
     } = params
 
     // Defaults & normalization
@@ -294,7 +297,8 @@ export async function updateAppDefinition(
         normalizedPreDeployFunction,
         normalizedServiceUpdateOverride,
         normalizedWebsocketSupport,
-        normalizedDeployTokenConfig
+        normalizedDeployTokenConfig,
+        serviceType
     )
 
     Logger.d(`AppName is updated: ${appName}`)

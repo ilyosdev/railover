@@ -93,6 +93,26 @@ router.post('/enablebasedomainssl/', function (req, res, next) {
         .catch(ApiStatusCodes.createCatcher(res))
 })
 
+// Force-enable SSL using a pre-installed wildcard certificate (no Certbot).
+// Used by AppX backend to enable HTTPS via Cloudflare Origin CA wildcard cert.
+router.post('/forceenablessl/', function (req, res, next) {
+    const serviceManager =
+        InjectionExtractor.extractUserFromInjected(res).user.serviceManager
+
+    const appName = req.body.appName
+
+    return Promise.resolve()
+        .then(function () {
+            return serviceManager.forceEnableSslForApp(appName)
+        })
+        .then(function () {
+            const msg = `SSL force-enabled for: ${appName} (wildcard cert)`
+            Logger.d(msg)
+            res.send(new BaseApi(ApiStatusCodes.STATUS_OK, msg))
+        })
+        .catch(ApiStatusCodes.createCatcher(res))
+})
+
 router.post('/customdomain/', function (req, res, next) {
     const serviceManager =
         InjectionExtractor.extractUserFromInjected(res).user.serviceManager
@@ -246,6 +266,48 @@ router.post('/rename/', function (req, res, next) {
             res.send(
                 new BaseApi(ApiStatusCodes.STATUS_OK, 'AppName is renamed')
             )
+        })
+        .catch(ApiStatusCodes.createCatcher(res))
+})
+
+// Scale app (set instanceCount to 0 or 1)
+router.post('/scale/', function (req, res, next) {
+    const serviceManager =
+        InjectionExtractor.extractUserFromInjected(res).user.serviceManager
+
+    const appName = req.body.appName
+    const instanceCount = Number(req.body.instanceCount)
+
+    if (instanceCount !== 0 && instanceCount !== 1) {
+        res.send(
+            new BaseApi(
+                ApiStatusCodes.ILLEGAL_PARAMETER,
+                'instanceCount must be 0 or 1'
+            )
+        )
+        return
+    }
+
+    if (!appName) {
+        res.send(
+            new BaseApi(
+                ApiStatusCodes.ILLEGAL_PARAMETER,
+                'appName is required'
+            )
+        )
+        return
+    }
+
+    return Promise.resolve()
+        .then(function () {
+            return serviceManager.scaleApp(appName, instanceCount)
+        })
+        .then(function () {
+            const msg = `App ${appName} scaled to ${instanceCount} instance(s)`
+            Logger.d(msg)
+            const baseApi = new BaseApi(ApiStatusCodes.STATUS_OK, msg)
+            baseApi.data = { appName, instanceCount }
+            res.send(baseApi)
         })
         .catch(ApiStatusCodes.createCatcher(res))
 })

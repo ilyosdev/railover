@@ -13,6 +13,7 @@ import {
     IHttpAuth,
     RepoInfo,
 } from '../models/AppDefinition'
+import { ServiceType } from '../models/ServiceType'
 import { IBuiltImage } from '../models/IBuiltImage'
 import Authenticator from '../user/Authenticator'
 import ApacheMd5 from '../utils/ApacheMd5'
@@ -672,7 +673,8 @@ class AppsDataStore {
         preDeployFunction: string,
         serviceUpdateOverride: string,
         websocketSupport: boolean,
-        appDeployTokenConfig: AppDeployTokenConfig
+        appDeployTokenConfig: AppDeployTokenConfig,
+        serviceType?: ServiceType
     ) {
         const self = this
         let appObj: IAppDef
@@ -749,6 +751,11 @@ class AppsDataStore {
                 appObj.description = description
                 appObj.projectId = projectId
                 appObj.tags = tags
+
+                // Persist serviceType if provided
+                if (serviceType !== undefined) {
+                    appObj.serviceType = serviceType
+                }
 
                 appObj.appDeployTokenConfig = {
                     enabled: !!appDeployTokenConfig.enabled,
