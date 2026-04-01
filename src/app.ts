@@ -93,7 +93,10 @@ app.use(function (req, res, next) {
             req.secure || req.get('X-Forwarded-Proto') === 'https'
 
         if (!isRequestSsl) {
-            const newUrl = `https://${req.hostname}:${CaptainConstants.configs.nginxPortNumber443}${req.originalUrl}`
+            // Traefik handles SSL termination on port 443
+            const httpsPort = CaptainConstants.configs.nginxPortNumber443
+            const portSuffix = httpsPort === 443 ? '' : `:${httpsPort}`
+            const newUrl = `https://${req.hostname}${portSuffix}${req.originalUrl}`
             res.redirect(302, newUrl)
             return
         }

@@ -16,11 +16,18 @@ class SelfHostedDockerRegistry {
         private loadBalancerManager: LoadBalancerManager,
         private myNodeId: string
     ) {
-        //
+        // Suppress noUnusedLocals — certbot and LB kept for interface compat
+        void this.certbotManager
+        void this.loadBalancerManager
     }
 
     enableRegistrySsl() {
         const self = this
+
+        // SSL is handled by Traefik + Cloudflare — certbot skipped
+        Logger.d(
+            'enableRegistrySsl called — SSL handled by Traefik + Cloudflare, certbot skipped'
+        )
 
         return Promise.resolve()
             .then(function () {
@@ -33,23 +40,9 @@ class SelfHostedDockerRegistry {
                         'Root must have SSL before enabling ssl for docker registry.'
                     )
                 }
-
-                return self.certbotManager.enableSsl(
-                    `${
-                        CaptainConstants.registrySubDomain
-                    }.${self.dataStore.getRootDomain()}`
-                )
             })
             .then(function () {
                 return self.dataStore.setHasRegistrySsl(true)
-            })
-            .then(function () {
-                Logger.d(
-                    'Updating Load Balancer - SelfHostedDockerRegistry.enableRegistrySsl'
-                )
-
-                // no return - ignore the returned promise
-                self.loadBalancerManager.rePopulateNginxConfigFile()
             })
     }
 
@@ -181,7 +174,7 @@ class SelfHostedDockerRegistry {
                 }
             })
             .then(function () {
-                Logger.d('Updating Certbot service...')
+                Logger.d('Updating Registry service...')
 
                 return dockerApi.updateService(
                     CaptainConstants.registryServiceName,

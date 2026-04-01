@@ -3,19 +3,30 @@ import ApiStatusCodes from '../../api/ApiStatusCodes'
 import CaptainConstants from '../../utils/CaptainConstants'
 import Logger from '../../utils/Logger'
 import Utils from '../../utils/Utils'
-import CertbotManager from './CertbotManager'
 import LoadBalancerManager from './LoadBalancerManager'
 import request = require('request')
 import fs = require('fs-extra')
 
+/**
+ * DomainResolveChecker — Traefik-only version.
+ *
+ * SSL certificate requests via certbot have been removed.
+ * Traefik + Cloudflare handle SSL automatically.
+ * Domain verification still works by writing a file and checking
+ * it is reachable via HTTP (Traefik routes the request).
+ */
 export default class DomainResolveChecker {
     constructor(
         private loadBalancerManager: LoadBalancerManager,
-        private certbotManager: CertbotManager
+        private certbotManager: any // kept for interface compat, unused
     ) {}
 
     requestCertificateForDomain(domainName: string) {
-        return this.certbotManager.enableSsl(domainName)
+        // SSL is handled by Traefik + Cloudflare — no certbot needed
+        Logger.d(
+            `requestCertificateForDomain called for ${domainName} — no-op (Traefik + Cloudflare handle SSL)`
+        )
+        return Promise.resolve(true)
     }
 
     /**
@@ -42,7 +53,9 @@ export default class DomainResolveChecker {
 
         return Promise.resolve()
             .then(function () {
-                return self.certbotManager.domainValidOrThrow(domainName)
+                if (self.certbotManager && self.certbotManager.domainValidOrThrow) {
+                    return self.certbotManager.domainValidOrThrow(domainName)
+                }
             })
             .then(function () {
                 return fs.outputFile(

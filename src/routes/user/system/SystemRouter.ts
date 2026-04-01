@@ -168,6 +168,7 @@ router.get('/info/', function (req, res, next) {
 })
 
 router.get('/loadbalancerinfo/', function (req, res, next) {
+    // Traefik handles load balancing now. Return stub data for backward compat.
     return Promise.resolve()
         .then(function () {
             return CaptainManager.get().getLoadBalanceManager().getInfo()
@@ -175,7 +176,7 @@ router.get('/loadbalancerinfo/', function (req, res, next) {
         .then(function (data) {
             const baseApi = new BaseApi(
                 ApiStatusCodes.STATUS_OK,
-                'Load Balancer info retrieved'
+                'Load Balancer info retrieved (Traefik — nginx removed)'
             )
             baseApi.data = data
             res.send(baseApi)

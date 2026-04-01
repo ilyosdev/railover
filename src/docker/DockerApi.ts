@@ -155,11 +155,23 @@ class DockerApi {
         retryCount = retryCount || 0
 
         return self.dockerode
-            .listTasks({
-                filters: {
-                    service: [serviceName],
-                    'desired-state': ['running'],
-                },
+            .getService(serviceName)
+            .inspect()
+            .catch(function (err) {
+                if (err && err.statusCode === 404) {
+                    throw new Error(
+                        `Service "${serviceName}" does not exist in Docker. Cannot find node id.`
+                    )
+                }
+                throw err
+            })
+            .then(function () {
+                return self.dockerode.listTasks({
+                    filters: {
+                        service: [serviceName],
+                        'desired-state': ['running'],
+                    },
+                })
             })
             .then(function (data) {
                 if (data.length > 0) {
@@ -183,7 +195,7 @@ class DockerApi {
                     }
 
                     throw new Error(
-                        `There must be only one instance (not ${data.length}) of the service running to find node id. ${serviceName}`
+                        `Service "${serviceName}" exists but has 0 running tasks after ${retryCount} retries. The service may be crashed or pending.`
                     )
                 }
             })

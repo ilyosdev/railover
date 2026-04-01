@@ -61,10 +61,9 @@ class CaptainManager {
             CaptainConstants.rootNameSpace
         )
         this.dockerApi = dockerApi
-        this.certbotManager = new CertbotManager(dockerApi)
+        this.certbotManager = new CertbotManager()
         this.loadBalancerManager = new LoadBalancerManager(
             dockerApi,
-            this.certbotManager,
             this.dataStore
         )
         this.domainResolveChecker = new DomainResolveChecker(
@@ -260,6 +259,9 @@ class CaptainManager {
                 return self.updateGoAccessInfo(goAccessInfo)
             })
             .then(function () {
+                return self.runStartupSelfTest()
+            })
+            .then(function () {
                 self.inited = true
 
                 self.performHealthCheck()
@@ -288,6 +290,133 @@ class CaptainManager {
                 setTimeout(function () {
                     process.exit(0)
                 }, 5000)
+            })
+    }
+
+    /**
+     * Startup self-test: verify Docker, Redis (via DataStore), and Traefik
+     * are reachable. Logs results but does NOT crash captain if Traefik
+     * is missing — captain can still function, containers just won't be
+     * routable until Traefik is started.
+     */
+    runStartupSelfTest() {
+        const self = this
+        const dockerApi = self.dockerApi
+
+        Logger.d('=== Running startup self-test ===')
+
+        const results: { check: string; ok: boolean; detail: string }[] = []
+
+        return Promise.resolve()
+            .then(function () {
+                // Check 1: Docker reachable
+                return dockerApi
+                    .getDockerVersion()
+                    .then(function (ver) {
+                        results.push({
+                            check: 'Docker',
+                            ok: true,
+                            detail: `v${ver.Version}`,
+                        })
+                    })
+                    .catch(function (err) {
+                        results.push({
+                            check: 'Docker',
+                            ok: false,
+                            detail: `${err}`,
+                        })
+                    })
+            })
+            .then(function () {
+                // Check 2: Redis / DataStore reachable (DataStore uses configstore on disk,
+                // but redis is used by BullMQ in the backend — here we just verify the
+                // data directory is writable)
+                try {
+                    const testPath =
+                        CaptainConstants.captainDataDirectory +
+                        '/.selftest-' +
+                        Date.now()
+                    require('fs-extra').outputFileSync(testPath, 'ok')
+                    require('fs-extra').removeSync(testPath)
+                    results.push({
+                        check: 'DataStore (disk)',
+                        ok: true,
+                        detail: CaptainConstants.captainDataDirectory,
+                    })
+                } catch (err) {
+                    results.push({
+                        check: 'DataStore (disk)',
+                        ok: false,
+                        detail: `${err}`,
+                    })
+                }
+            })
+            .then(function () {
+                // Check 3: Traefik service exists
+                return dockerApi
+                    .isServiceRunningByName(
+                        CaptainConstants.traefikServiceName
+                    )
+                    .then(function (isRunning) {
+                        if (isRunning) {
+                            results.push({
+                                check: 'Traefik',
+                                ok: true,
+                                detail: `Service "${CaptainConstants.traefikServiceName}" is running`,
+                            })
+                        } else {
+                            results.push({
+                                check: 'Traefik',
+                                ok: false,
+                                detail: `Service "${CaptainConstants.traefikServiceName}" is NOT running — containers will not be routable`,
+                            })
+                        }
+                    })
+                    .catch(function (err) {
+                        results.push({
+                            check: 'Traefik',
+                            ok: false,
+                            detail: `Could not check Traefik: ${err}`,
+                        })
+                    })
+            })
+            .then(function () {
+                // Check 4: Verify no stale nginx service is running
+                return dockerApi
+                    .isServiceRunningByName('captain-nginx')
+                    .then(function (isRunning) {
+                        if (isRunning) {
+                            Logger.w(
+                                'WARNING: Stale captain-nginx service detected. It is no longer needed (Traefik handles routing). Consider removing it: docker service rm captain-nginx'
+                            )
+                            results.push({
+                                check: 'Stale nginx',
+                                ok: true,
+                                detail:
+                                    'captain-nginx is still running — safe to remove',
+                            })
+                        }
+                    })
+                    .catch(function () {
+                        // Not running — good
+                    })
+            })
+            .then(function () {
+                Logger.d('=== Startup self-test results ===')
+                let allOk = true
+                results.forEach(function (r) {
+                    const status = r.ok ? 'PASS' : 'FAIL'
+                    Logger.d(`  [${status}] ${r.check}: ${r.detail}`)
+                    if (!r.ok) allOk = false
+                })
+
+                if (!allOk) {
+                    Logger.w(
+                        'Some startup self-test checks failed. Captain will continue, but some features may not work correctly.'
+                    )
+                } else {
+                    Logger.d('All startup self-test checks passed.')
+                }
             })
     }
 
@@ -357,75 +486,16 @@ class CaptainManager {
             )
         }
 
-        function checkNginxHealth(callback: ISuccessCallback) {
-            let callbackCalled = false
+        // nginx health check removed — Traefik handles routing,
+        // captain no longer crashes if nginx is missing
 
-            setTimeout(function () {
-                if (callbackCalled) {
-                    return
-                }
-                callbackCalled = true
-
-                callback(false)
-            }, TIMEOUT_HEALTH_CHECK)
-
-            self.domainResolveChecker
-                .verifyCaptainOwnsDomainOrThrow(
-                    captainPublicDomain,
-                    '-healthcheck'
-                )
-                .then(function () {
-                    if (callbackCalled) {
-                        return
-                    }
-                    callbackCalled = true
-
-                    callback(true)
-                })
-                .catch(function () {
-                    if (callbackCalled) {
-                        return
-                    }
-                    callbackCalled = true
-
-                    callback(false)
-                })
-        }
-
-        interface IChecks {
-            captainHealth: { value: boolean }
-            nginxHealth: { value: boolean }
-        }
-
-        const checksPerformed = {} as IChecks
-
-        function scheduleIfNecessary() {
-            if (
-                !checksPerformed.captainHealth ||
-                !checksPerformed.nginxHealth
-            ) {
-                return
-            }
-
-            let hasFailedCheck = false
-
-            if (!checksPerformed.captainHealth.value) {
+        checkCaptainHealth(function (success) {
+            if (!success) {
+                self.consecutiveHealthCheckFailCount =
+                    self.consecutiveHealthCheckFailCount + 1
                 Logger.w(
                     `Captain health check failed: #${self.consecutiveHealthCheckFailCount} at ${captainPublicDomain}`
                 )
-                hasFailedCheck = true
-            }
-
-            if (!checksPerformed.nginxHealth.value) {
-                Logger.w(
-                    `NGINX health check failed: #${self.consecutiveHealthCheckFailCount}`
-                )
-                hasFailedCheck = true
-            }
-
-            if (hasFailedCheck) {
-                self.consecutiveHealthCheckFailCount =
-                    self.consecutiveHealthCheckFailCount + 1
             } else {
                 self.consecutiveHealthCheckFailCount = 0
             }
@@ -435,20 +505,6 @@ class CaptainManager {
             if (self.consecutiveHealthCheckFailCount > MAX_FAIL_ALLOWED) {
                 process.exit(1)
             }
-        }
-
-        checkCaptainHealth(function (success) {
-            checksPerformed.captainHealth = {
-                value: success,
-            }
-            scheduleIfNecessary()
-        })
-
-        checkNginxHealth(function (success) {
-            checksPerformed.nginxHealth = {
-                value: success,
-            }
-            scheduleIfNecessary()
         })
     }
 
@@ -796,26 +852,18 @@ class CaptainManager {
 
     enableSsl(emailAddress: string) {
         const self = this
+        // SSL is handled by Traefik + Cloudflare origin certificates.
+        // Certbot is no longer used. We still store the email and SSL flag
+        // so the UI/API remains backward compatible.
+        Logger.d(
+            'enableSsl called — SSL handled by Traefik + Cloudflare, certbot skipped'
+        )
         return Promise.resolve()
-            .then(function () {
-                return self.certbotManager.ensureRegistered(emailAddress)
-            })
-            .then(function () {
-                return self.certbotManager.enableSsl(
-                    `${
-                        CaptainConstants.configs.captainSubDomain
-                    }.${self.dataStore.getRootDomain()}`
-                )
-            })
             .then(function () {
                 return self.dataStore.setUserEmailAddress(emailAddress)
             })
             .then(function () {
                 return self.dataStore.setHasRootSsl(true)
-            })
-            .then(function () {
-                Logger.d('Updating Load Balancer - CaptainManager.enableSsl')
-                return self.loadBalancerManager.rePopulateNginxConfigFile()
             })
     }
 
@@ -863,49 +911,15 @@ class CaptainManager {
     }
 
     setNginxConfig(baseConfig: string, captainConfig: string) {
+        // Nginx config is no longer used — Traefik handles routing.
+        // Store values for backward compatibility but don't generate any config files.
+        Logger.d(
+            'setNginxConfig called — stored for compatibility but nginx config generation is disabled'
+        )
         const self = this
-        let existingConfigs: {
-            baseConfig: {
-                byDefault: string
-                customValue: any
-            }
-            captainConfig: {
-                byDefault: string
-                customValue: any
-            }
-        }
-        return Promise.resolve()
-            .then(function () {
-                return self.dataStore.getNginxConfig()
-            })
-            .then(function (configs) {
-                existingConfigs = configs
-                return self.dataStore.setNginxConfig(baseConfig, captainConfig)
-            })
-            .then(function () {
-                return self.loadBalancerManager.rePopulateNginxConfigFile()
-            })
-            .catch(function (error) {
-                if (
-                    error &&
-                    error.captainErrorType ===
-                        ApiStatusCodes.STATUS_ERROR_NGINX_VALIDATION_FAILED
-                ) {
-                    Logger.d(
-                        "Nginx validation failed. Reverting changes in system's nginx configs..."
-                    )
-                    self.dataStore
-                        .setNginxConfig(
-                            existingConfigs.baseConfig.customValue,
-                            existingConfigs.captainConfig.customValue
-                        )
-
-                        .then(function () {
-                            return self.loadBalancerManager.rePopulateNginxConfigFile()
-                        })
-                }
-                throw error
-            })
+        return Promise.resolve().then(function () {
+            return self.dataStore.setNginxConfig(baseConfig, captainConfig)
+        })
     }
 
     changeCaptainRootDomain(requestedCustomDomain: string, force: boolean) {

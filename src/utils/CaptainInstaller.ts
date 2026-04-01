@@ -378,17 +378,9 @@ export function install() {
             )
         })
         .then(function () {
-            const imageName = CaptainConstants.configs.nginxImageName
-            console.log(`Pulling: ${imageName}`)
-            return DockerApi.get().pullImage(imageName, undefined)
-        })
-        .then(function () {
+            // nginx image pull removed — Traefik handles routing
+            // certbot image pull removed — Traefik + Cloudflare handle SSL
             const imageName = CaptainConstants.configs.appPlaceholderImageName
-            console.log(`Pulling: ${imageName}`)
-            return DockerApi.get().pullImage(imageName, undefined)
-        })
-        .then(function () {
-            const imageName = CaptainConstants.configs.certbotImageName
             console.log(`Pulling: ${imageName}`)
             return DockerApi.get().pullImage(imageName, undefined)
         })

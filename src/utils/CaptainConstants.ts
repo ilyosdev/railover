@@ -48,7 +48,8 @@ const configs = {
 
     appPlaceholderImageName: 'ilyosdev/railover-placeholder:latest',
 
-    nginxImageName: 'nginx:1.27.2',
+    // nginx removed — Traefik handles all routing via Docker labels
+    nginxImageName: '',
 
     defaultEmail: 'deploy@appx.uz',
 
@@ -63,7 +64,8 @@ const configs = {
 
     analyticsDomain: '',
 
-    certbotImageName: 'caprover/certbot-sleeping:v2.11.0',
+    // certbot removed — Traefik + Cloudflare handle SSL
+    certbotImageName: '',
 
     certbotCertCommandRules: undefined as CertbotCertCommandRule[] | undefined,
 
@@ -181,11 +183,15 @@ const data = {
 
     captainSaltSecretKey: 'captain-salt',
 
-    nginxServiceName: 'captain-nginx',
+    // nginx service removed — Traefik handles routing
+    nginxServiceName: 'captain-nginx-removed',
 
     captainServiceName: 'captain-captain',
 
-    certbotServiceName: 'captain-certbot',
+    // certbot service removed — Traefik + Cloudflare handle SSL
+    certbotServiceName: 'captain-certbot-removed',
+
+    traefikServiceName: 'traefik',
 
     goAccessContainerName: 'captain-goaccess-container',
 
